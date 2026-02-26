@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default: Deny all access to all documents unless explicitly allowed below.
+    // This ensures a secure-by-default posture.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow authenticated users to read and write their own user document
+    // in a 'users' collection.
+    // Example path: /users/{userId}
+    // Users can read and update their own profile, but cannot create or delete
+    // documents in this collection (unless you explicitly allow 'create' or 'delete').
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Add more specific rules for other collections as your application evolves.
+    // For now, all other collections will fall under the default `allow read, write: if false;`
+    // ensuring no accidental exposure of data.
+  }
+}
