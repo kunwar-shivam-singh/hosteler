@@ -1,12 +1,18 @@
-
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Search, Home, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 
 export default function LandingPage() {
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
@@ -87,7 +93,7 @@ export default function LandingPage() {
       <footer className="w-full py-6 px-4 border-t bg-white">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} PG Locator. All rights reserved. Built for mobile.
+            © {currentYear || '...'} PG Locator. All rights reserved. Built for mobile.
           </p>
           <nav className="flex gap-4 sm:gap-6">
             <Link className="text-xs hover:underline underline-offset-4" href="#">Terms</Link>
