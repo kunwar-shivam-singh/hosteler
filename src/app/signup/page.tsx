@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -18,7 +17,7 @@ import { Home, Loader2 } from "lucide-react";
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRole = (searchParams.get("role") as "tenant" | "owner") || "tenant";
+  const initialRole = (searchParams.get("role") as "tenant" | "owner" | "admin") || "tenant";
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -82,6 +81,10 @@ export default function SignupPage() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="owner" id="owner" />
                   <Label htmlFor="owner" className="cursor-pointer">Owner</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="admin" id="admin" />
+                  <Label htmlFor="admin" className="cursor-pointer">Admin</Label>
                 </div>
               </RadioGroup>
             </div>
