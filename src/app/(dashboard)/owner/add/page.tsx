@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, ArrowLeft, X, Home } from "lucide-react";
+import { Loader2, Upload, ArrowLeft, X, Home, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { AIListingEnhancer } from "@/components/ai-listing-enhancer";
 
@@ -73,22 +73,31 @@ export default function AddPropertyPage() {
     setIsLoading(true);
 
     try {
-      const imageUrls = [];
+      const imageUrls: string[] = [];
+      
+      // Upload images sequentially to avoid browser hangs
       if (images.length > 0) {
         for (const image of images) {
           try {
-            const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
+            const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const imagePath = `properties/${user.uid}/${fileName}`;
             const imageRef = ref(storage, imagePath);
             const uploadResult = await uploadBytes(imageRef, image);
             const url = await getDownloadURL(uploadResult.ref);
             imageUrls.push(url);
-          } catch (uploadError) {
+          } catch (uploadError: any) {
             console.error("Image upload failed for:", image.name, uploadError);
+            toast({
+              variant: "destructive",
+              title: "Upload Failed",
+              description: `Could not upload ${image.name}. Continuing with others.`,
+            });
           }
         }
       }
 
       const propertiesRef = collection(db, "properties");
+      // Use non-blocking write to prevent the UI from waiting on the server ack
       addDocumentNonBlocking(propertiesRef, {
         ...formData,
         ownerId: user.uid,
@@ -98,35 +107,45 @@ export default function AddPropertyPage() {
       });
 
       toast({ 
-        title: "Listing Submitted!", 
-        description: "Your PG will be visible after admin approval. Redirecting..." 
+        title: "Listing Published!", 
+        description: "Your PG will be visible after admin approval." 
       });
       
-      // Navigate away after a short delay
-      setTimeout(() => {
-        router.push("/owner/dashboard");
-      }, 500);
+      router.push("/owner/dashboard");
     } catch (error: any) {
       console.error("Submission error:", error);
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
-        description: error.message || "Failed to upload images or save listing." 
+        description: error.message || "Failed to save listing." 
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
   const applyAIResult = (description: string, amenities: string[]) => {
+    // We update the description, but only suggest amenities without force-selecting them
+    // so the user doesn't get unintended amenities saved.
     setFormData((prev) => ({
       ...prev,
       description,
-      amenities: Array.from(new Set([...prev.amenities, ...amenities])),
+      // Instead of merging, we could just show a hint, but if we merge, we should
+      // at least make sure they are valid amenities from our list.
+      amenities: Array.from(new Set([
+        ...prev.amenities, 
+        ...amenities.filter(a => AMENITIES_LIST.includes(a))
+      ])),
     }));
+    
+    toast({
+      title: "AI Enhancement Ready",
+      description: "Description updated. Please review the selected amenities below.",
+    });
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-20">
       <Button variant="ghost" className="rounded-xl" onClick={() => router.back()}>
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Listings
       </Button>
@@ -246,8 +265,11 @@ export default function AddPropertyPage() {
             <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-bold">Need a professional description?</h4>
-                  <p className="text-sm text-muted-foreground">Our AI can write it for you and suggest amenities based on your property details.</p>
+                  <h4 className="font-bold flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    AI Listing Assistant
+                  </h4>
+                  <p className="text-sm text-muted-foreground">Automatically write a professional description based on your inputs.</p>
                 </div>
               </div>
               <AIListingEnhancer formData={formData} onApply={applyAIResult} />
@@ -271,11 +293,11 @@ export default function AddPropertyPage() {
                   {AMENITIES_LIST.map((item) => (
                     <div key={item} className="flex items-center space-x-2">
                       <Checkbox
-                        id={item}
+                        id={`amenity-${item}`}
                         checked={formData.amenities.includes(item)}
                         onCheckedChange={() => setFormData({ ...formData, amenities: toggleSelection(formData.amenities, item) })}
                       />
-                      <Label htmlFor={item} className="text-xs">{item}</Label>
+                      <Label htmlFor={`amenity-${item}`} className="text-xs cursor-pointer">{item}</Label>
                     </div>
                   ))}
                 </div>
@@ -286,7 +308,7 @@ export default function AddPropertyPage() {
               <Label>Property Images</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
-                  <div key={preview} className="relative aspect-square rounded-xl overflow-hidden border group">
+                  <div key={`${preview}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border group">
                     <Image src={preview} alt="Preview" fill className="object-cover" />
                     <button
                       type="button"
@@ -309,7 +331,7 @@ export default function AddPropertyPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Publishing...
+                  Publishing Listing...
                 </>
               ) : (
                 "Publish Listing"
