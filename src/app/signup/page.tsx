@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,14 +37,32 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
 
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
+      const batch = writeBatch(db);
+      
+      // 1. Create User Profile
+      const userRef = doc(db, "users", user.uid);
+      batch.set(userRef, {
+        id: user.uid,
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
         createdAt: new Date().toISOString(),
       });
+
+      // 2. If Admin, also register in roles_admin for security rule validation
+      if (formData.role === "admin") {
+        const adminRef = doc(db, "roles_admin", user.uid);
+        batch.set(adminRef, {
+          id: user.uid,
+          name: formData.name,
+          email: formData.email,
+          role: "admin",
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      await batch.commit();
 
       toast({ title: "Account created!", description: "Welcome to PG Locator." });
       router.push(`/${formData.role}/dashboard`);
