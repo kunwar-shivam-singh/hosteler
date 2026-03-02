@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import { PropertyCard } from "@/components/property-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/select";
 
 export default function TenantDashboard() {
+  const db = useFirestore();
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -24,10 +24,13 @@ export default function TenantDashboard() {
   const [rentFilter, setRentFilter] = useState("any");
 
   useEffect(() => {
-    fetchProperties();
-  }, [cityFilter, rentFilter]);
+    if (db) {
+      fetchProperties();
+    }
+  }, [db, cityFilter, rentFilter]);
 
   const fetchProperties = async () => {
+    if (!db) return;
     setLoading(true);
     try {
       let q = query(
@@ -43,7 +46,6 @@ export default function TenantDashboard() {
       const querySnapshot = await getDocs(q);
       let results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Client-side rent filter (Firestore doesn't support multiple inequalities easily)
       if (rentFilter !== "any") {
         const maxRent = parseInt(rentFilter);
         results = results.filter((p: any) => p.rent <= maxRent);
@@ -72,7 +74,6 @@ export default function TenantDashboard() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -121,7 +122,6 @@ export default function TenantDashboard() {
         </div>
       </div>
 
-      {/* Results Grid */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />

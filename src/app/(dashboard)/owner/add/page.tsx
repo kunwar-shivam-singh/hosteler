@@ -76,11 +76,15 @@ export default function AddPropertyPage() {
       const imageUrls = [];
       if (images.length > 0) {
         for (const image of images) {
-          const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
-          const imageRef = ref(storage, imagePath);
-          await uploadBytes(imageRef, image);
-          const url = await getDownloadURL(imageRef);
-          imageUrls.push(url);
+          try {
+            const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
+            const imageRef = ref(storage, imagePath);
+            const uploadResult = await uploadBytes(imageRef, image);
+            const url = await getDownloadURL(uploadResult.ref);
+            imageUrls.push(url);
+          } catch (uploadError) {
+            console.error("Image upload failed for:", image.name, uploadError);
+          }
         }
       }
 
@@ -98,7 +102,10 @@ export default function AddPropertyPage() {
         description: "Your PG will be visible after admin approval. Redirecting..." 
       });
       
-      router.push("/owner/dashboard");
+      // Navigate away after a short delay
+      setTimeout(() => {
+        router.push("/owner/dashboard");
+      }, 500);
     } catch (error: any) {
       console.error("Submission error:", error);
       toast({ 

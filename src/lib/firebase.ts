@@ -1,13 +1,10 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { firebaseConfig } from "@/firebase/config";
+// This file serves as a barrel for standardized Firebase services.
+// It redirects to the internal @/firebase library to ensure singleton instances.
 
-// Ensure the app is initialized with the full production config including storageBucket
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+import { initializeFirebase } from "@/firebase";
 
-export { auth, db, storage };
+const services = initializeFirebase();
+
+export const auth = services.auth;
+export const db = services.firestore;
+export const storage = services.storage;

@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useFirebase } from "@/firebase";
 
 export type UserRole = "tenant" | "owner" | "admin" | null;
 
@@ -23,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const { auth, firestore: db } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -32,11 +32,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setRole(userData.role as UserRole);
-          setUserName(userData.name || null);
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setRole(userData.role as UserRole);
+            setUserName(userData.name || null);
+          }
+        } catch (error) {
+          console.error("AuthContext: Error fetching user role:", error);
         }
       } else {
         setUser(null);
@@ -47,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth, db]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading, userName }}>
