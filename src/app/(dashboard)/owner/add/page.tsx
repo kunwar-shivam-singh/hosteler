@@ -75,43 +75,51 @@ export default function AddPropertyPage() {
     try {
       const imageUrls: string[] = [];
       
-      // Upload images sequentially to avoid browser hangs or timeouts
+      // Upload images sequentially with better error recovery
       if (images.length > 0) {
         for (const image of images) {
           try {
+            console.log("Starting upload for:", image.name);
             const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
             const imagePath = `properties/${user.uid}/${fileName}`;
             const imageRef = ref(storage, imagePath);
+            
+            // Standard uploadBytes - if this hangs, it usually means the storage bucket isn't set up
             const uploadResult = await uploadBytes(imageRef, image);
             const url = await getDownloadURL(uploadResult.ref);
             imageUrls.push(url);
+            console.log("Upload successful:", url);
           } catch (uploadError: any) {
             console.error("Image upload failed for:", image.name, uploadError);
             toast({
               variant: "destructive",
               title: "Upload Failed",
-              description: `Could not upload ${image.name}. Continuing...`,
+              description: `Could not upload ${image.name}. Continuing with other data...`,
             });
           }
         }
       }
 
       const propertiesRef = collection(db, "properties");
-      // Initiate firestore write. This is non-blocking.
-      addDocumentNonBlocking(propertiesRef, {
+      
+      // Prepare data for non-blocking write
+      const propertyData = {
         ...formData,
         ownerId: user.uid,
         images: imageUrls,
         status: "pending",
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      // Non-blocking write call
+      addDocumentNonBlocking(propertiesRef, propertyData);
 
       toast({ 
         title: "Listing Published!", 
-        description: "Your PG is now pending approval." 
+        description: "Your PG is now pending approval. Check your dashboard." 
       });
       
-      // Navigate away immediately as Firestore will sync in background
+      // Navigate immediately
       router.push("/owner/dashboard");
     } catch (error: any) {
       console.error("Submission error:", error);
@@ -125,8 +133,6 @@ export default function AddPropertyPage() {
   };
 
   const applyAIResult = (description: string, amenities: string[]) => {
-    // We update the description, but we DON'T force-add amenities
-    // to give the user final choice in the UI.
     setFormData((prev) => ({
       ...prev,
       description
@@ -134,7 +140,7 @@ export default function AddPropertyPage() {
     
     toast({
       title: "AI Description Ready",
-      description: "We've updated your description. Please review and select any suggested amenities below.",
+      description: "We've updated your description. You can still choose your own amenities below.",
     });
   };
 
@@ -299,7 +305,7 @@ export default function AddPropertyPage() {
             </div>
 
             <div className="space-y-4">
-              <Label>Property Images</Label>
+              <Label>Property Images (Must upload at least one for approval)</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
                   <div key={`${preview}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border group">
@@ -325,7 +331,7 @@ export default function AddPropertyPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Uploading & Publishing...
+                  Publishing Listing...
                 </>
               ) : (
                 "Publish Listing"
