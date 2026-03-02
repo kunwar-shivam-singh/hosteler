@@ -70,39 +70,29 @@ export default function AddPropertyPage() {
       return;
     }
 
+    if (images.length === 0) {
+      toast({ variant: "destructive", title: "Images Required", description: "Please upload at least one image of the property." });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const imageUrls: string[] = [];
       
-      // Upload images sequentially with better error recovery
-      if (images.length > 0) {
-        for (const image of images) {
-          try {
-            console.log("Starting upload for:", image.name);
-            const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const imagePath = `properties/${user.uid}/${fileName}`;
-            const imageRef = ref(storage, imagePath);
-            
-            // Standard uploadBytes - if this hangs, it usually means the storage bucket isn't set up
-            const uploadResult = await uploadBytes(imageRef, image);
-            const url = await getDownloadURL(uploadResult.ref);
-            imageUrls.push(url);
-            console.log("Upload successful:", url);
-          } catch (uploadError: any) {
-            console.error("Image upload failed for:", image.name, uploadError);
-            toast({
-              variant: "destructive",
-              title: "Upload Failed",
-              description: `Could not upload ${image.name}. Continuing with other data...`,
-            });
-          }
-        }
+      // Upload images sequentially to avoid overwhelming the connection
+      for (const image of images) {
+        const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const imagePath = `properties/${user.uid}/${fileName}`;
+        const imageRef = ref(storage, imagePath);
+        
+        const uploadResult = await uploadBytes(imageRef, image);
+        const url = await getDownloadURL(uploadResult.ref);
+        imageUrls.push(url);
       }
 
       const propertiesRef = collection(db, "properties");
       
-      // Prepare data for non-blocking write
       const propertyData = {
         ...formData,
         ownerId: user.uid,
@@ -111,43 +101,37 @@ export default function AddPropertyPage() {
         createdAt: new Date().toISOString(),
       };
 
-      // Non-blocking write call
+      // Non-blocking write to Firestore
       addDocumentNonBlocking(propertiesRef, propertyData);
 
       toast({ 
-        title: "Listing Published!", 
-        description: "Your PG is now pending approval. Check your dashboard." 
+        title: "Listing Submitted!", 
+        description: "Your PG is now pending approval by an administrator." 
       });
       
-      // Navigate immediately
       router.push("/owner/dashboard");
     } catch (error: any) {
       console.error("Submission error:", error);
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
-        description: error.message || "Failed to save listing." 
+        description: error.message || "Failed to upload images or save listing." 
       });
       setIsLoading(false);
     }
   };
 
-  const applyAIResult = (description: string, amenities: string[]) => {
+  const applyAIResult = (description: string) => {
     setFormData((prev) => ({
       ...prev,
       description
     }));
-    
-    toast({
-      title: "AI Description Ready",
-      description: "We've updated your description. You can still choose your own amenities below.",
-    });
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-20">
       <Button variant="ghost" className="rounded-xl" onClick={() => router.back()}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Listings
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
 
       <Card className="shadow-lg border-none rounded-3xl overflow-hidden">
@@ -157,8 +141,8 @@ export default function AddPropertyPage() {
               <Home className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-3xl font-bold font-headline">New Property</CardTitle>
-              <CardDescription>Tell us about your PG/Hostel</CardDescription>
+              <CardTitle className="text-3xl font-bold font-headline">New Listing</CardTitle>
+              <CardDescription>Enter details for your PG or Hostel</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -169,11 +153,11 @@ export default function AddPropertyPage() {
                 <Label htmlFor="pgName">PG / Hostel Name</Label>
                 <Input
                   id="pgName"
-                  placeholder="Royal Stay PG"
+                  placeholder="e.g. Royal Stay PG"
                   required
                   value={formData.pgName}
                   onChange={(e) => setFormData({ ...formData, pgName: e.target.value })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -184,40 +168,40 @@ export default function AddPropertyPage() {
                   required
                   value={formData.contactNumber}
                   onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
-                  placeholder="Bangalore"
+                  placeholder="e.g. Bangalore"
                   required
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="area">Area / Locality</Label>
+                <Label htmlFor="area">Area</Label>
                 <Input
                   id="area"
-                  placeholder="HSR Layout"
+                  placeholder="e.g. HSR Layout"
                   required
                   value={formData.area}
                   onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="address">Full Address</Label>
                 <Input
                   id="address"
-                  placeholder="Flat No, Building Name, Landmark"
+                  placeholder="Building name, street, landmark"
                   required
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -225,11 +209,10 @@ export default function AddPropertyPage() {
                 <Input
                   id="rent"
                   type="number"
-                  placeholder="8500"
                   required
                   value={formData.rent || ""}
                   onChange={(e) => setFormData({ ...formData, rent: parseInt(e.target.value) || 0 })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -237,18 +220,17 @@ export default function AddPropertyPage() {
                 <Input
                   id="beds"
                   type="number"
-                  placeholder="5"
                   required
                   value={formData.availableBeds || ""}
                   onChange={(e) => setFormData({ ...formData, availableBeds: parseInt(e.target.value) || 0 })}
-                  className="rounded-xl h-12"
+                  className="rounded-xl"
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label>Room Types Available</Label>
-              <div className="flex flex-wrap gap-4 pt-1">
+              <Label>Room Sharing Options</Label>
+              <div className="flex flex-wrap gap-3">
                 {ROOM_TYPES.map((type) => (
                   <div key={type} className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg border">
                     <Checkbox
@@ -256,7 +238,7 @@ export default function AddPropertyPage() {
                       checked={formData.roomTypes.includes(type)}
                       onCheckedChange={() => setFormData({ ...formData, roomTypes: toggleSelection(formData.roomTypes, type) })}
                     />
-                    <Label htmlFor={type} className="cursor-pointer text-sm font-medium">{type}</Label>
+                    <Label htmlFor={type} className="cursor-pointer text-xs">{type}</Label>
                   </div>
                 ))}
               </div>
@@ -267,45 +249,43 @@ export default function AddPropertyPage() {
                 <div>
                   <h4 className="font-bold flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    AI Listing Assistant
+                    AI Description Enhancer
                   </h4>
-                  <p className="text-sm text-muted-foreground">Improve your description instantly using Gemini AI.</p>
+                  <p className="text-sm text-muted-foreground">Get a professional description instantly.</p>
                 </div>
               </div>
               <AIListingEnhancer formData={formData} onApply={applyAIResult} />
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="desc">Description</Label>
-                <Textarea
-                  id="desc"
-                  placeholder="Highlight what makes your place special..."
-                  className="min-h-[150px] rounded-xl"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="desc">Full Description</Label>
+              <Textarea
+                id="desc"
+                placeholder="Details about meals, rules, facilities..."
+                className="min-h-[150px] rounded-xl"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
 
-              <div className="space-y-3">
-                <Label>Amenities</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {AMENITIES_LIST.map((item) => (
-                    <div key={item} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`amenity-${item}`}
-                        checked={formData.amenities.includes(item)}
-                        onCheckedChange={() => setFormData({ ...formData, amenities: toggleSelection(formData.amenities, item) })}
-                      />
-                      <Label htmlFor={`amenity-${item}`} className="text-xs cursor-pointer">{item}</Label>
-                    </div>
-                  ))}
-                </div>
+            <div className="space-y-3">
+              <Label>Amenities Available</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {AMENITIES_LIST.map((item) => (
+                  <div key={item} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`amenity-${item}`}
+                      checked={formData.amenities.includes(item)}
+                      onCheckedChange={() => setFormData({ ...formData, amenities: toggleSelection(formData.amenities, item) })}
+                    />
+                    <Label htmlFor={`amenity-${item}`} className="text-xs cursor-pointer">{item}</Label>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="space-y-4">
-              <Label>Property Images (Must upload at least one for approval)</Label>
+              <Label>Property Photos (At least one is required)</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
                   <div key={`${preview}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border group">
@@ -321,13 +301,13 @@ export default function AddPropertyPage() {
                 ))}
                 <label className="border-2 border-dashed border-muted flex flex-col items-center justify-center aspect-square rounded-xl cursor-pointer hover:bg-muted/30 transition-colors">
                   <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-xs font-medium text-muted-foreground">Upload</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">Add Photo</span>
                   <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                 </label>
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20" disabled={isLoading}>
+            <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
