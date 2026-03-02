@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, serverTimestamp } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -75,7 +75,7 @@ export default function AddPropertyPage() {
     try {
       const imageUrls: string[] = [];
       
-      // Upload images sequentially to avoid browser hangs
+      // Upload images sequentially to avoid browser hangs or timeouts
       if (images.length > 0) {
         for (const image of images) {
           try {
@@ -90,14 +90,14 @@ export default function AddPropertyPage() {
             toast({
               variant: "destructive",
               title: "Upload Failed",
-              description: `Could not upload ${image.name}. Continuing with others.`,
+              description: `Could not upload ${image.name}. Continuing...`,
             });
           }
         }
       }
 
       const propertiesRef = collection(db, "properties");
-      // Use non-blocking write to prevent the UI from waiting on the server ack
+      // Initiate firestore write. This is non-blocking.
       addDocumentNonBlocking(propertiesRef, {
         ...formData,
         ownerId: user.uid,
@@ -108,9 +108,10 @@ export default function AddPropertyPage() {
 
       toast({ 
         title: "Listing Published!", 
-        description: "Your PG will be visible after admin approval." 
+        description: "Your PG is now pending approval." 
       });
       
+      // Navigate away immediately as Firestore will sync in background
       router.push("/owner/dashboard");
     } catch (error: any) {
       console.error("Submission error:", error);
@@ -119,28 +120,21 @@ export default function AddPropertyPage() {
         title: "Submission Failed", 
         description: error.message || "Failed to save listing." 
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
   const applyAIResult = (description: string, amenities: string[]) => {
-    // We update the description, but only suggest amenities without force-selecting them
-    // so the user doesn't get unintended amenities saved.
+    // We update the description, but we DON'T force-add amenities
+    // to give the user final choice in the UI.
     setFormData((prev) => ({
       ...prev,
-      description,
-      // Instead of merging, we could just show a hint, but if we merge, we should
-      // at least make sure they are valid amenities from our list.
-      amenities: Array.from(new Set([
-        ...prev.amenities, 
-        ...amenities.filter(a => AMENITIES_LIST.includes(a))
-      ])),
+      description
     }));
     
     toast({
-      title: "AI Enhancement Ready",
-      description: "Description updated. Please review the selected amenities below.",
+      title: "AI Description Ready",
+      description: "We've updated your description. Please review and select any suggested amenities below.",
     });
   };
 
@@ -269,7 +263,7 @@ export default function AddPropertyPage() {
                     <Sparkles className="h-4 w-4 text-primary" />
                     AI Listing Assistant
                   </h4>
-                  <p className="text-sm text-muted-foreground">Automatically write a professional description based on your inputs.</p>
+                  <p className="text-sm text-muted-foreground">Improve your description instantly using Gemini AI.</p>
                 </div>
               </div>
               <AIListingEnhancer formData={formData} onApply={applyAIResult} />
@@ -331,7 +325,7 @@ export default function AddPropertyPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Publishing Listing...
+                  Uploading & Publishing...
                 </>
               ) : (
                 "Publish Listing"

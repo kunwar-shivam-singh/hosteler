@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useFirebase } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { PropertyCard } from "@/components/property-card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Home, MessageSquarePlus } from "lucide-react";
+import { PlusCircle, Loader2, Home, MessageSquarePlus, XCircle, Clock } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OwnerDashboard() {
   const { user, userName } = useAuth();
   const { firestore: db } = useFirebase();
+  const { toast } = useToast();
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,16 +27,29 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
+      // Use a simple query to avoid composite index requirements for MVP
       const q = query(
         collection(db, "properties"),
-        where("ownerId", "==", user.uid),
-        orderBy("createdAt", "desc")
+        where("ownerId", "==", user.uid)
       );
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort client-side to ensure visibility even if indexes aren't ready
+      results.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
       setProperties(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching properties:", error);
+      toast({
+        variant: "destructive",
+        title: "Load Failed",
+        description: "Could not fetch your properties. Please try again."
+      });
     } finally {
       setLoading(false);
     }
@@ -54,32 +69,41 @@ export default function OwnerDashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-primary/10 p-4 rounded-2xl">
-            <Home className="h-6 w-6 text-primary" />
+          <div className="bg-primary/10 p-3 rounded-2xl">
+            <Home className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground font-medium">Total Listings</p>
-            <p className="text-2xl font-bold">{properties.length}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase">Total</p>
+            <p className="text-xl font-bold">{properties.length}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-green-100 p-4 rounded-2xl">
-            <MessageSquarePlus className="h-6 w-6 text-green-600" />
+          <div className="bg-green-100 p-3 rounded-2xl">
+            <MessageSquarePlus className="h-5 w-5 text-green-600" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground font-medium">Approved</p>
-            <p className="text-2xl font-bold">{properties.filter(p => p.status === 'approved').length}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase">Approved</p>
+            <p className="text-xl font-bold">{properties.filter(p => p.status === 'approved').length}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-yellow-100 p-4 rounded-2xl">
-            <Loader2 className="h-6 w-6 text-yellow-600" />
+          <div className="bg-yellow-100 p-3 rounded-2xl">
+            <Clock className="h-5 w-5 text-yellow-600" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground font-medium">Pending</p>
-            <p className="text-2xl font-bold">{properties.filter(p => p.status === 'pending').length}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase">Pending</p>
+            <p className="text-xl font-bold">{properties.filter(p => p.status === 'pending').length}</p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
+          <div className="bg-red-100 p-3 rounded-2xl">
+            <XCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase">Rejected</p>
+            <p className="text-xl font-bold">{properties.filter(p => p.status === 'rejected').length}</p>
           </div>
         </div>
       </div>
