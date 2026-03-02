@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, doc } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import { useAuth, useFirestore } from "@/firebase";
@@ -67,18 +67,30 @@ export default function AddPropertyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    
+    if (!user) {
+      toast({ variant: "destructive", title: "Auth Required", description: "You must be logged in to post." });
+      return;
+    }
+    
+    if (!db) {
+      toast({ variant: "destructive", title: "Service Error", description: "Database is not initialized." });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       // 1. Upload Images
       const imageUrls = [];
-      for (const image of images) {
-        const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
-        const imageRef = ref(storage, imagePath);
-        await uploadBytes(imageRef, image);
-        const url = await getDownloadURL(imageRef);
-        imageUrls.push(url);
+      if (images.length > 0) {
+        for (const image of images) {
+          const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
+          const imageRef = ref(storage, imagePath);
+          await uploadBytes(imageRef, image);
+          const url = await getDownloadURL(imageRef);
+          imageUrls.push(url);
+        }
       }
 
       // 2. Save to Firestore (Non-blocking)
@@ -96,9 +108,10 @@ export default function AddPropertyPage() {
         description: "Your PG will be visible after admin approval. Redirecting..." 
       });
       
-      // Redirect immediately while the sync happens in the background
+      // Navigate to dashboard immediately
       router.push("/owner/dashboard");
     } catch (error: any) {
+      console.error("Submission error:", error);
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
@@ -257,7 +270,7 @@ export default function AddPropertyPage() {
               </div>
 
               <div className="space-y-3">
-                <Label>Suggested Amenities</Label>
+                <Label>Amenities</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {AMENITIES_LIST.map((item) => (
                     <div key={item} className="flex items-center space-x-2">
