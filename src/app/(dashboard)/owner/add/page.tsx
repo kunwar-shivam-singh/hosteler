@@ -1,12 +1,12 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { useAuth } from "@/context/auth-context";
+import { storage } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ const AMENITIES_LIST = ["WiFi", "Laundry", "Meals Included", "AC", "Power Backup
 
 export default function AddPropertyPage() {
   const { user } = useAuth();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -66,21 +67,23 @@ export default function AddPropertyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !db) return;
     setIsLoading(true);
 
     try {
       // 1. Upload Images
       const imageUrls = [];
       for (const image of images) {
-        const imageRef = ref(storage, `properties/${user.uid}/${Date.now()}-${image.name}`);
+        const imagePath = `properties/${user.uid}/${Date.now()}-${image.name}`;
+        const imageRef = ref(storage, imagePath);
         await uploadBytes(imageRef, image);
         const url = await getDownloadURL(imageRef);
         imageUrls.push(url);
       }
 
-      // 2. Save to Firestore
-      await addDoc(collection(db, "properties"), {
+      // 2. Save to Firestore (Non-blocking)
+      const propertiesRef = collection(db, "properties");
+      addDocumentNonBlocking(propertiesRef, {
         ...formData,
         ownerId: user.uid,
         images: imageUrls,
@@ -88,11 +91,19 @@ export default function AddPropertyPage() {
         createdAt: new Date().toISOString(),
       });
 
-      toast({ title: "Listing Submitted!", description: "It will be visible after admin approval." });
+      toast({ 
+        title: "Listing Submitted!", 
+        description: "Your PG will be visible after admin approval. Redirecting..." 
+      });
+      
+      // Redirect immediately while the sync happens in the background
       router.push("/owner/dashboard");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
+      toast({ 
+        variant: "destructive", 
+        title: "Submission Failed", 
+        description: error.message || "Failed to upload images or save listing." 
+      });
       setIsLoading(false);
     }
   };
@@ -125,7 +136,6 @@ export default function AddPropertyPage() {
         </CardHeader>
         <CardContent className="p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="pgName">PG / Hostel Name</Label>
@@ -190,7 +200,7 @@ export default function AddPropertyPage() {
                   placeholder="8500"
                   required
                   value={formData.rent || ""}
-                  onChange={(e) => setFormData({ ...formData, rent: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, rent: parseInt(e.target.value) || 0 })}
                   className="rounded-xl h-12"
                 />
               </div>
@@ -202,13 +212,12 @@ export default function AddPropertyPage() {
                   placeholder="5"
                   required
                   value={formData.availableBeds || ""}
-                  onChange={(e) => setFormData({ ...formData, availableBeds: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, availableBeds: parseInt(e.target.value) || 0 })}
                   className="rounded-xl h-12"
                 />
               </div>
             </div>
 
-            {/* Room Types */}
             <div className="space-y-3">
               <Label>Room Types Available</Label>
               <div className="flex flex-wrap gap-4 pt-1">
@@ -225,7 +234,6 @@ export default function AddPropertyPage() {
               </div>
             </div>
 
-            {/* AI Generator Button */}
             <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -236,7 +244,6 @@ export default function AddPropertyPage() {
               <AIListingEnhancer formData={formData} onApply={applyAIResult} />
             </div>
 
-            {/* Description & Amenities */}
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="desc">Description</Label>
@@ -266,7 +273,6 @@ export default function AddPropertyPage() {
               </div>
             </div>
 
-            {/* Image Upload */}
             <div className="space-y-4">
               <Label>Property Images</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -291,8 +297,14 @@ export default function AddPropertyPage() {
             </div>
 
             <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              Publish Listing
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                "Publish Listing"
+              )}
             </Button>
           </form>
         </CardContent>

@@ -1,58 +1,64 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, getDocs, doc, updateDoc, deleteDoc, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, query, orderBy, getDocs, doc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Eye, Trash2, MapPin, ExternalLink } from "lucide-react";
+import { Loader2, Check, X, Trash2, MapPin, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 
 export default function AdminDashboard() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const db = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchProperties();
-  }, []);
+    if (db) {
+      fetchProperties();
+    }
+  }, [db]);
 
   const fetchProperties = async () => {
+    if (!db) return;
     setLoading(true);
     try {
       const q = query(collection(db, "properties"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setProperties(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching properties:", error);
+      toast({ variant: "destructive", title: "Fetch Failed", description: error.message || "Could not load properties." });
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (id: string, status: "approved" | "rejected") => {
-    try {
-      await updateDoc(doc(db, "properties", id), { status });
-      setProperties(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-      toast({ title: `Listing ${status}`, description: `The property is now ${status}.` });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Update Failed", description: error.message });
-    }
+  const updateStatus = (id: string, status: "approved" | "rejected") => {
+    if (!db) return;
+    const docRef = doc(db, "properties", id);
+    updateDocumentNonBlocking(docRef, { status });
+    
+    // Optimistic UI update
+    setProperties(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    toast({ title: `Listing ${status}`, description: `The property is now ${status}.` });
   };
 
-  const deleteListing = async (id: string) => {
+  const deleteListing = (id: string) => {
+    if (!db) return;
     if (!confirm("Are you sure you want to delete this listing permanently?")) return;
-    try {
-      await deleteDoc(doc(db, "properties", id));
-      setProperties(prev => prev.filter(p => p.id !== id));
-      toast({ title: "Listing Deleted", description: "The listing has been removed." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Delete Failed", description: error.message });
-    }
+    
+    const docRef = doc(db, "properties", id);
+    deleteDocumentNonBlocking(docRef);
+    
+    // Optimistic UI update
+    setProperties(prev => prev.filter(p => p.id !== id));
+    toast({ title: "Listing Deleted", description: "The listing has been removed." });
   };
 
   const pendingListings = properties.filter(p => p.status === "pending");
