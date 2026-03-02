@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
-import { useAuth, useFirestore } from "@/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ const ROOM_TYPES = ["Single Sharing", "Double Sharing", "Triple Sharing", "Four 
 const AMENITIES_LIST = ["WiFi", "Laundry", "Meals Included", "AC", "Power Backup", "CCTV", "Gym", "Parking"];
 
 export default function AddPropertyPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -108,7 +108,6 @@ export default function AddPropertyPage() {
         description: "Your PG will be visible after admin approval. Redirecting..." 
       });
       
-      // Navigate to dashboard immediately
       router.push("/owner/dashboard");
     } catch (error: any) {
       console.error("Submission error:", error);
