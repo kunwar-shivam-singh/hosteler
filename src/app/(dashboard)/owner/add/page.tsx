@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
-import { useUser, useFirestore } from "@/firebase";
+import { useFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +21,7 @@ const ROOM_TYPES = ["Single Sharing", "Double Sharing", "Triple Sharing", "Four 
 const AMENITIES_LIST = ["WiFi", "Laundry", "Meals Included", "AC", "Power Backup", "CCTV", "Gym", "Parking"];
 
 export default function AddPropertyPage() {
-  const { user } = useUser();
-  const db = useFirestore();
+  const { user, firestore: db, storage } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -48,7 +46,6 @@ export default function AddPropertyPage() {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
       setImages((prev) => [...prev, ...filesArray]);
-      
       const previews = filesArray.map((file) => URL.createObjectURL(file));
       setImagePreviews((prev) => [...prev, ...previews]);
     }
@@ -72,16 +69,10 @@ export default function AddPropertyPage() {
       toast({ variant: "destructive", title: "Auth Required", description: "You must be logged in to post." });
       return;
     }
-    
-    if (!db) {
-      toast({ variant: "destructive", title: "Service Error", description: "Database is not initialized." });
-      return;
-    }
 
     setIsLoading(true);
 
     try {
-      // 1. Upload Images
       const imageUrls = [];
       if (images.length > 0) {
         for (const image of images) {
@@ -93,7 +84,6 @@ export default function AddPropertyPage() {
         }
       }
 
-      // 2. Save to Firestore (Non-blocking)
       const propertiesRef = collection(db, "properties");
       addDocumentNonBlocking(propertiesRef, {
         ...formData,

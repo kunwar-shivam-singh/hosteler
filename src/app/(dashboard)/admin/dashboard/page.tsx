@@ -43,8 +43,6 @@ export default function AdminDashboard() {
     if (!db) return;
     const docRef = doc(db, "properties", id);
     updateDocumentNonBlocking(docRef, { status });
-    
-    // Optimistic UI update
     setProperties(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     toast({ title: `Listing ${status}`, description: `The property is now ${status}.` });
   };
@@ -52,11 +50,8 @@ export default function AdminDashboard() {
   const deleteListing = (id: string) => {
     if (!db) return;
     if (!confirm("Are you sure you want to delete this listing permanently?")) return;
-    
     const docRef = doc(db, "properties", id);
     deleteDocumentNonBlocking(docRef);
-    
-    // Optimistic UI update
     setProperties(prev => prev.filter(p => p.id !== id));
     toast({ title: "Listing Deleted", description: "The listing has been removed." });
   };
