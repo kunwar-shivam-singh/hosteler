@@ -13,9 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, ArrowLeft, X, Home, Sparkles } from "lucide-react";
+import { Loader2, Upload, ArrowLeft, X, Home, Sparkles, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { AIListingEnhancer } from "@/components/ai-listing-enhancer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ROOM_TYPES = ["Single Sharing", "Double Sharing", "Triple Sharing", "Four Sharing"];
 const AMENITIES_LIST = ["WiFi", "Laundry", "Meals Included", "AC", "Power Backup", "CCTV", "Gym", "Parking"];
@@ -26,6 +27,7 @@ export default function AddPropertyPage() {
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
@@ -62,6 +64,15 @@ export default function AddPropertyPage() {
       : [...list, item];
   };
 
+  const uploadWithTimeout = async (imageRef: any, file: File, timeoutMs = 15000) => {
+    return Promise.race([
+      uploadBytes(imageRef, file),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Upload timed out. Check if Firebase Storage is enabled in the console.")), timeoutMs)
+      )
+    ]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -76,21 +87,35 @@ export default function AddPropertyPage() {
     }
 
     setIsLoading(true);
+    setUploadProgress("Preparing to upload...");
 
     try {
       const imageUrls: string[] = [];
       
-      // Upload images sequentially to avoid overwhelming the connection
-      for (const image of images) {
+      console.log("STARTING UPLOAD PROCESS...");
+      
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        setUploadProgress(`Uploading photo ${i + 1} of ${images.length}...`);
+        
         const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
         const imagePath = `properties/${user.uid}/${fileName}`;
         const imageRef = ref(storage, imagePath);
         
-        const uploadResult = await uploadBytes(imageRef, image);
-        const url = await getDownloadURL(uploadResult.ref);
-        imageUrls.push(url);
+        console.log(`UPLOADING PHOTO ${i + 1}: ${imagePath}`);
+        
+        try {
+          const uploadResult: any = await uploadWithTimeout(imageRef, image);
+          const url = await getDownloadURL(uploadResult.ref);
+          console.log(`UPLOAD OK: ${url}`);
+          imageUrls.push(url);
+        } catch (uploadErr: any) {
+          console.error(`UPLOAD FAILED FOR PHOTO ${i + 1}:`, uploadErr);
+          throw new Error(`Failed to upload photo ${i + 1}: ${uploadErr.message}`);
+        }
       }
 
+      setUploadProgress("Saving property details...");
       const propertiesRef = collection(db, "properties");
       
       const propertyData = {
@@ -101,7 +126,7 @@ export default function AddPropertyPage() {
         createdAt: new Date().toISOString(),
       };
 
-      // Non-blocking write to Firestore
+      console.log("SAVING TO FIRESTORE:", propertyData);
       addDocumentNonBlocking(propertiesRef, propertyData);
 
       toast({ 
@@ -111,13 +136,14 @@ export default function AddPropertyPage() {
       
       router.push("/owner/dashboard");
     } catch (error: any) {
-      console.error("Submission error:", error);
+      console.error("SUBMISSION ERROR:", error);
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
-        description: error.message || "Failed to upload images or save listing." 
+        description: error.message || "An unexpected error occurred." 
       });
       setIsLoading(false);
+      setUploadProgress("");
     }
   };
 
@@ -133,6 +159,14 @@ export default function AddPropertyPage() {
       <Button variant="ghost" className="rounded-xl" onClick={() => router.back()}>
         <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
+
+      {isLoading && (
+        <Alert className="bg-primary/10 border-primary/20 text-primary">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Publishing in progress</AlertTitle>
+          <AlertDescription>{uploadProgress}</AlertDescription>
+        </Alert>
+      )}
 
       <Card className="shadow-lg border-none rounded-3xl overflow-hidden">
         <CardHeader className="bg-primary/5 border-b p-8">
@@ -158,6 +192,7 @@ export default function AddPropertyPage() {
                   value={formData.pgName}
                   onChange={(e) => setFormData({ ...formData, pgName: e.target.value })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -169,6 +204,7 @@ export default function AddPropertyPage() {
                   value={formData.contactNumber}
                   onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -180,6 +216,7 @@ export default function AddPropertyPage() {
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -191,6 +228,7 @@ export default function AddPropertyPage() {
                   value={formData.area}
                   onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
@@ -202,6 +240,7 @@ export default function AddPropertyPage() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -213,6 +252,7 @@ export default function AddPropertyPage() {
                   value={formData.rent || ""}
                   onChange={(e) => setFormData({ ...formData, rent: parseInt(e.target.value) || 0 })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -224,6 +264,7 @@ export default function AddPropertyPage() {
                   value={formData.availableBeds || ""}
                   onChange={(e) => setFormData({ ...formData, availableBeds: parseInt(e.target.value) || 0 })}
                   className="rounded-xl"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -237,6 +278,7 @@ export default function AddPropertyPage() {
                       id={type}
                       checked={formData.roomTypes.includes(type)}
                       onCheckedChange={() => setFormData({ ...formData, roomTypes: toggleSelection(formData.roomTypes, type) })}
+                      disabled={isLoading}
                     />
                     <Label htmlFor={type} className="cursor-pointer text-xs">{type}</Label>
                   </div>
@@ -265,6 +307,7 @@ export default function AddPropertyPage() {
                 className="min-h-[150px] rounded-xl"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                disabled={isLoading}
               />
             </div>
 
@@ -277,6 +320,7 @@ export default function AddPropertyPage() {
                       id={`amenity-${item}`}
                       checked={formData.amenities.includes(item)}
                       onCheckedChange={() => setFormData({ ...formData, amenities: toggleSelection(formData.amenities, item) })}
+                      disabled={isLoading}
                     />
                     <Label htmlFor={`amenity-${item}`} className="text-xs cursor-pointer">{item}</Label>
                   </div>
@@ -290,22 +334,36 @@ export default function AddPropertyPage() {
                 {imagePreviews.map((preview, index) => (
                   <div key={`${preview}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border group">
                     <Image src={preview} alt="Preview" fill className="object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {!isLoading && (
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
-                <label className="border-2 border-dashed border-muted flex flex-col items-center justify-center aspect-square rounded-xl cursor-pointer hover:bg-muted/30 transition-colors">
-                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-[10px] font-medium text-muted-foreground">Add Photo</span>
-                  <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                </label>
+                {!isLoading && (
+                  <label className="border-2 border-dashed border-muted flex flex-col items-center justify-center aspect-square rounded-xl cursor-pointer hover:bg-muted/30 transition-colors">
+                    <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                    <span className="text-[10px] font-medium text-muted-foreground">Add Photo</span>
+                    <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
+                )}
               </div>
             </div>
+
+            {isLoading && (
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex gap-3 items-start">
+                <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-bold">Important Notice</p>
+                  <p>If this stays on "Publishing" for more than 15 seconds, please ensure you have enabled <strong>Firebase Storage</strong> in your Firebase Console.</p>
+                </div>
+              </div>
+            )}
 
             <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl" disabled={isLoading}>
               {isLoading ? (
