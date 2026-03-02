@@ -113,7 +113,6 @@ export default function AddPropertyPage() {
       setUploadProgress("Saving property details...");
       const propertiesRef = collection(db, "properties");
       
-      // Explicitly construct final data to ensure no unwanted amenities are added
       const propertyData = {
         pgName: formData.pgName,
         city: formData.city,
@@ -124,7 +123,7 @@ export default function AddPropertyPage() {
         contactNumber: formData.contactNumber,
         description: formData.description,
         roomTypes: formData.roomTypes,
-        amenities: formData.amenities, // Only includes what user checked
+        amenities: formData.amenities, // Only includes manually checked items
         ownerId: user.uid,
         images: imageUrls,
         status: "pending",
@@ -152,6 +151,7 @@ export default function AddPropertyPage() {
   };
 
   const applyAIResult = (description: string) => {
+    // We only apply the description, ignoring suggested amenities per your preference
     setFormData((prev) => ({
       ...prev,
       description

@@ -5,7 +5,7 @@ import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Mail, Phone, Calendar, ShieldCheck, UserCheck } from "lucide-react";
+import { Loader2, User, Mail, Phone, Calendar, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminUsersPage() {
