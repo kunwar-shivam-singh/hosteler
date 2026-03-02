@@ -27,7 +27,7 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
-      // Use a simple query to avoid composite index requirements
+      // Simple query to avoid composite index issues - filter by status in state if needed
       const q = query(
         collection(db, "properties"),
         where("ownerId", "==", user.uid)
@@ -35,7 +35,7 @@ export default function OwnerDashboard() {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Sort client-side to ensure visibility regardless of index propagation
+      // Client-side sort to ensure consistent display
       results.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
@@ -48,7 +48,7 @@ export default function OwnerDashboard() {
       toast({
         variant: "destructive",
         title: "Load Failed",
-        description: "Could not fetch your properties. Please check your internet connection."
+        description: "Could not fetch your properties. Check your database permissions."
       });
     } finally {
       setLoading(false);

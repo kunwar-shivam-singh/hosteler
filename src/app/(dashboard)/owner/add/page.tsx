@@ -64,11 +64,11 @@ export default function AddPropertyPage() {
       : [...list, item];
   };
 
-  const uploadWithTimeout = async (imageRef: any, file: File, timeoutMs = 15000) => {
+  const uploadWithTimeout = async (imageRef: any, file: File, timeoutMs = 30000) => {
     return Promise.race([
       uploadBytes(imageRef, file),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Upload timed out. Check if Firebase Storage is enabled in the console.")), timeoutMs)
+        setTimeout(() => reject(new Error("Upload timed out. Please ensure Firebase Storage is enabled in your console and the bucket is initialized.")), timeoutMs)
       )
     ]);
   };
@@ -92,8 +92,6 @@ export default function AddPropertyPage() {
     try {
       const imageUrls: string[] = [];
       
-      console.log("STARTING UPLOAD PROCESS...");
-      
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
         setUploadProgress(`Uploading photo ${i + 1} of ${images.length}...`);
@@ -102,31 +100,37 @@ export default function AddPropertyPage() {
         const imagePath = `properties/${user.uid}/${fileName}`;
         const imageRef = ref(storage, imagePath);
         
-        console.log(`UPLOADING PHOTO ${i + 1}: ${imagePath}`);
-        
         try {
           const uploadResult: any = await uploadWithTimeout(imageRef, image);
           const url = await getDownloadURL(uploadResult.ref);
-          console.log(`UPLOAD OK: ${url}`);
           imageUrls.push(url);
         } catch (uploadErr: any) {
-          console.error(`UPLOAD FAILED FOR PHOTO ${i + 1}:`, uploadErr);
-          throw new Error(`Failed to upload photo ${i + 1}: ${uploadErr.message}`);
+          console.error("UPLOAD ERROR:", uploadErr);
+          throw new Error(uploadErr.message || `Failed to upload photo ${i + 1}`);
         }
       }
 
       setUploadProgress("Saving property details...");
       const propertiesRef = collection(db, "properties");
       
+      // Explicitly construct final data to ensure no unwanted amenities are added
       const propertyData = {
-        ...formData,
+        pgName: formData.pgName,
+        city: formData.city,
+        area: formData.area,
+        address: formData.address,
+        rent: formData.rent,
+        availableBeds: formData.availableBeds,
+        contactNumber: formData.contactNumber,
+        description: formData.description,
+        roomTypes: formData.roomTypes,
+        amenities: formData.amenities, // Only includes what user checked
         ownerId: user.uid,
         images: imageUrls,
         status: "pending",
         createdAt: new Date().toISOString(),
       };
 
-      console.log("SAVING TO FIRESTORE:", propertyData);
       addDocumentNonBlocking(propertiesRef, propertyData);
 
       toast({ 
@@ -140,7 +144,7 @@ export default function AddPropertyPage() {
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
-        description: error.message || "An unexpected error occurred." 
+        description: error.message || "An unexpected error occurred during publishing." 
       });
       setIsLoading(false);
       setUploadProgress("");
@@ -161,7 +165,7 @@ export default function AddPropertyPage() {
       </Button>
 
       {isLoading && (
-        <Alert className="bg-primary/10 border-primary/20 text-primary">
+        <Alert className="bg-primary/10 border-primary/20 text-primary animate-pulse">
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertTitle>Publishing in progress</AlertTitle>
           <AlertDescription>{uploadProgress}</AlertDescription>
@@ -293,7 +297,7 @@ export default function AddPropertyPage() {
                     <Sparkles className="h-4 w-4 text-primary" />
                     AI Description Enhancer
                   </h4>
-                  <p className="text-sm text-muted-foreground">Get a professional description instantly.</p>
+                  <p className="text-sm text-muted-foreground">Get a professional description instantly. Amenities are not auto-modified.</p>
                 </div>
               </div>
               <AIListingEnhancer formData={formData} onApply={applyAIResult} />
@@ -312,7 +316,7 @@ export default function AddPropertyPage() {
             </div>
 
             <div className="space-y-3">
-              <Label>Amenities Available</Label>
+              <Label>Amenities Available (Manual Selection)</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {AMENITIES_LIST.map((item) => (
                   <div key={item} className="flex items-center space-x-2">
@@ -360,7 +364,7 @@ export default function AddPropertyPage() {
                 <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
                 <div className="text-sm text-yellow-800">
                   <p className="font-bold">Important Notice</p>
-                  <p>If this stays on "Publishing" for more than 15 seconds, please ensure you have enabled <strong>Firebase Storage</strong> in your Firebase Console.</p>
+                  <p>If this stays on "Publishing" for more than 30 seconds, please ensure you have clicked <strong>"Get Started"</strong> in the Storage section of your Firebase Console.</p>
                 </div>
               </div>
             )}
