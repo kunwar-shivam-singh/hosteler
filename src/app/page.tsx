@@ -10,6 +10,7 @@ export default function LandingPage() {
   const [currentYear, setCurrentYear] = useState<number | null>(null);
 
   useEffect(() => {
+    // Setting state in useEffect prevents hydration mismatch for dates/years
     setCurrentYear(new Date().getFullYear());
   }, []);
 

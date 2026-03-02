@@ -1,23 +1,46 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default: Deny all access to all documents unless explicitly allowed below.
-    // This ensures a secure-by-default posture.
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // Default: Deny all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to read and write their own user document
-    // in a 'users' collection.
-    // Example path: /users/{userId}
-    // Users can read and update their own profile, but cannot create or delete
-    // documents in this collection (unless you explicitly allow 'create' or 'delete').
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
-    // Add more specific rules for other collections as your application evolves.
-    // For now, all other collections will fall under the default `allow read, write: if false;`
-    // ensuring no accidental exposure of data.
+    match /roles_admin/{adminId} {
+      allow read: if request.auth != null; 
+      allow write: if request.auth != null && request.auth.uid == adminId; 
+    }
+
+    match /properties/{propertyId} {
+      // Public/Tenants can read approved properties
+      // Owners can read their own
+      // Admins can read all
+      allow read: if (resource == null || resource.data.status == 'approved') 
+                  || (request.auth != null && resource.data.ownerId == request.auth.uid)
+                  || isAdmin();
+      
+      // Owners can create/update their own
+      // Admins can update/delete any
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid)
+                    || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if (request.auth != null && resource.data.userId == request.auth.uid)
+                            || isAdmin();
+    }
   }
 }
