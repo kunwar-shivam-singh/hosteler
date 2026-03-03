@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 30 20% 95%;
+    --background: 30 20% 98%;
     --foreground: 30 10% 10%;
     --card: 0 0% 100%;
     --card-foreground: 30 10% 10%;
@@ -15,16 +15,16 @@
     --primary-foreground: 30 20% 98%;
     --secondary: 30 10% 90%;
     --secondary-foreground: 30 80% 45%;
-    --muted: 30 10% 92%;
-    --muted-foreground: 30 10% 40%;
-    --accent: 0 70% 60%;
-    --accent-foreground: 0 0% 100%;
+    --muted: 30 10% 94%;
+    --muted-foreground: 30 10% 45%;
+    --accent: 30 80% 45%;
+    --accent-foreground: 30 20% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 10% 85%;
-    --input: 30 10% 85%;
+    --border: 30 10% 88%;
+    --input: 30 10% 88%;
     --ring: 30 80% 45%;
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   .dark {
@@ -40,8 +40,8 @@
     --secondary-foreground: 30 80% 45%;
     --muted: 30 10% 15%;
     --muted-foreground: 30 10% 60%;
-    --accent: 0 70% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 30 80% 45%;
+    --accent-foreground: 30 20% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 30 10% 20%;
@@ -55,9 +55,17 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background text-foreground font-body antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline font-bold tracking-tight;
   }
+}
+
+.glass-morphism {
+  @apply bg-white/70 backdrop-blur-md border border-white/20;
+}
+
+.dashboard-card {
+  @apply bg-white rounded-[2rem] border-none shadow-sm hover:shadow-md transition-all duration-300;
 }

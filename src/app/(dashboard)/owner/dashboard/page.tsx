@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,9 +7,10 @@ import { useFirebase } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { PropertyCard } from "@/components/property-card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Home, MessageSquarePlus, XCircle, Clock } from "lucide-react";
+import { PlusCircle, Loader2, Home, CheckCircle, Clock, XCircle, TrendingUp, Users, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function OwnerDashboard() {
   const { user, userName } = useAuth();
@@ -27,8 +29,6 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
-      // Use a simple query to avoid index errors. Filter by ownerId only.
-      // Status filtering/sorting is done on the client side for robustness.
       const q = query(
         collection(db, "properties"),
         where("ownerId", "==", user.uid)
@@ -36,7 +36,6 @@ export default function OwnerDashboard() {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Client-side sort: newest first
       results.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
@@ -49,91 +48,119 @@ export default function OwnerDashboard() {
       toast({
         variant: "destructive",
         title: "Load Failed",
-        description: "Could not fetch your properties. Please check your internet connection."
+        description: "Could not fetch your properties."
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const stats = [
+    { label: "Listings", value: properties.length, icon: Home, color: "bg-blue-50 text-blue-600" },
+    { label: "Approved", value: properties.filter(p => p.status === 'approved').length, icon: CheckCircle, color: "bg-green-50 text-green-600" },
+    { label: "Pending", value: properties.filter(p => p.status === 'pending').length, icon: Clock, color: "bg-amber-50 text-amber-600" },
+    { label: "Rejected", value: properties.filter(p => p.status === 'rejected').length, icon: XCircle, color: "bg-red-50 text-red-600" },
+  ];
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Welcome, {userName}!</h1>
-          <p className="text-muted-foreground">Manage your PG and Hostel listings.</p>
+          <h1 className="text-4xl font-extrabold font-headline tracking-tight text-foreground">
+            Hi, {userName?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-muted-foreground font-medium mt-1">Here's how your properties are performing.</p>
         </div>
-        <Button asChild className="rounded-2xl h-12 px-6 shadow-lg shadow-primary/20">
+        <Button asChild className="rounded-2xl h-14 px-8 shadow-xl shadow-primary/25 text-lg font-bold">
           <Link href="/owner/add">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Listing
+            <PlusCircle className="mr-2 h-5 w-5" /> List New PG
           </Link>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-primary/10 p-3 rounded-2xl">
-            <Home className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase">Total</p>
-            <p className="text-xl font-bold">{properties.length}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-green-100 p-3 rounded-2xl">
-            <MessageSquarePlus className="h-5 w-5 text-green-600" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase">Approved</p>
-            <p className="text-xl font-bold">{properties.filter(p => p.status === 'approved').length}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-yellow-100 p-3 rounded-2xl">
-            <Clock className="h-5 w-5 text-yellow-600" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase">Pending</p>
-            <p className="text-xl font-bold">{properties.filter(p => p.status === 'pending').length}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border flex items-center gap-4">
-          <div className="bg-red-100 p-3 rounded-2xl">
-            <XCircle className="h-5 w-5 text-red-600" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase">Rejected</p>
-            <p className="text-xl font-bold">{properties.filter(p => p.status === 'rejected').length}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="dashboard-card border-none">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${stat.color} p-3 rounded-2xl`}>
+                  <stat.icon className="h-6 w-6" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-muted-foreground opacity-30" />
+              </div>
+              <p className="text-3xl font-black font-headline">{stat.value}</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">{stat.label}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold font-headline">Your Listings</h2>
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground font-medium">Loading your properties...</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold font-headline">Manage Listings</h2>
+            <Link href="/owner/dashboard" className="text-xs font-bold text-primary hover:underline">View All</Link>
           </div>
-        ) : properties.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} role="owner" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed text-center px-4">
-            <div className="bg-muted p-6 rounded-full mb-4">
-              <PlusCircle className="h-12 w-12 text-muted-foreground" />
+          
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="mt-4 text-muted-foreground font-medium">Syncing data...</p>
             </div>
-            <h3 className="text-xl font-bold">No properties listed yet</h3>
-            <p className="text-muted-foreground max-w-sm mt-2">Start attracting tenants by adding your first PG or Hostel listing today!</p>
-            <Button asChild className="mt-6 rounded-xl" size="lg">
-              <Link href="/owner/add">Add Listing Now</Link>
-            </Button>
-          </div>
-        )}
+          ) : properties.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {properties.map((property) => (
+                <PropertyCard key={property.id} property={property} role="owner" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border border-dashed text-center px-10">
+              <div className="bg-muted p-8 rounded-full mb-6">
+                <PlusCircle className="h-12 w-12 text-muted-foreground opacity-20" />
+              </div>
+              <h3 className="text-2xl font-bold font-headline">No listings found</h3>
+              <p className="text-muted-foreground max-w-sm mt-2">Start earning by listing your first PG or Hostel today!</p>
+              <Button asChild className="mt-8 rounded-2xl h-12 px-10" size="lg">
+                <Link href="/owner/add">Add Listing Now</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold font-headline">Quick Insights</h2>
+          <Card className="dashboard-card overflow-hidden">
+            <CardContent className="p-0">
+              <div className="bg-primary p-6 text-white">
+                <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Estimated Reach</p>
+                <p className="text-4xl font-black font-headline">1,248</p>
+                <p className="text-[10px] mt-4 font-medium bg-white/20 inline-block px-2 py-1 rounded-lg">+12% from last month</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-muted p-2 rounded-xl"><Users className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold">Inquiries</p>
+                    <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-primary w-[65%] rounded-full"></div>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black">42</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="bg-muted p-2 rounded-xl"><MessageSquare className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold">Responses</p>
+                    <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                      <div className="h-full bg-accent w-[40%] rounded-full"></div>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black">28</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

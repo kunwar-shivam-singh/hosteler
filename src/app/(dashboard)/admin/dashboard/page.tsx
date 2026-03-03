@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,8 +8,8 @@ import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Trash2, MapPin, ExternalLink } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, Check, X, Trash2, MapPin, ExternalLink, ShieldCheck, Users, Home, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 
 export default function AdminDashboard() {
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
       setProperties(results);
     } catch (error: any) {
       console.error("Error fetching properties:", error);
-      toast({ variant: "destructive", title: "Fetch Failed", description: error.message || "Could not load properties." });
+      toast({ variant: "destructive", title: "Fetch Failed", description: "Could not load listings." });
     } finally {
       setLoading(false);
     }
@@ -57,45 +58,74 @@ export default function AdminDashboard() {
   };
 
   const pendingListings = properties.filter(p => p.status === "pending");
-  const otherListings = properties.filter(p => p.status !== "pending");
+  
+  const stats = [
+    { label: "Total Listings", value: properties.length, icon: Home, color: "text-blue-600 bg-blue-50" },
+    { label: "Pending Approval", value: pendingListings.length, icon: Clock, color: "text-amber-600 bg-amber-50" },
+    { label: "Approved PGs", value: properties.filter(p => p.status === 'approved').length, icon: ShieldCheck, color: "text-green-600 bg-green-50" },
+  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold font-headline">Admin Moderation</h1>
-        <p className="text-muted-foreground">Approve or reject listings to keep the platform clean.</p>
+        <h1 className="text-4xl font-extrabold font-headline tracking-tight">Ops Center</h1>
+        <p className="text-muted-foreground font-medium">Global moderation and platform operations.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="dashboard-card">
+            <CardContent className="p-8 flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-black font-headline">{stat.value}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">{stat.label}</p>
+              </div>
+              <div className={`${stat.color} p-4 rounded-3xl`}>
+                <stat.icon className="h-8 w-8" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="space-y-6">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          Pending Approvals <Badge variant="secondary">{pendingListings.length}</Badge>
+        <h2 className="text-2xl font-bold font-headline flex items-center gap-3">
+          Moderate Queue <Badge variant="secondary" className="rounded-xl px-3 py-1 font-black">{pendingListings.length}</Badge>
         </h2>
         {loading ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-20 bg-white rounded-[2rem] border">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
         ) : pendingListings.length > 0 ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {pendingListings.map(listing => (
-              <Card key={listing.id} className="overflow-hidden border-primary/20 bg-primary/5">
-                <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-center">
-                  <div className="w-24 h-24 relative rounded-xl overflow-hidden shrink-0">
-                    <Image src={listing.images?.[0] || "https://picsum.photos/seed/admin/200/200"} fill className="object-cover" alt="Property" />
+              <Card key={listing.id} className="dashboard-card overflow-hidden group">
+                <CardContent className="p-6 flex flex-col sm:flex-row gap-6 items-center">
+                  <div className="w-32 h-32 relative rounded-2xl overflow-hidden shrink-0 border-4 border-white shadow-sm transition-transform group-hover:scale-105">
+                    <Image src={listing.images?.[0] || "https://picsum.photos/seed/admin/300/300"} fill className="object-cover" alt="Property" />
                   </div>
-                  <div className="flex-1 space-y-1 text-center sm:text-left">
-                    <h3 className="font-bold text-lg">{listing.pgName}</h3>
-                    <div className="flex items-center justify-center sm:justify-start text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3 mr-1" /> {listing.area}, {listing.city}
+                  <div className="flex-1 space-y-2 text-center sm:text-left min-w-0">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <h3 className="font-black text-xl truncate">{listing.pgName}</h3>
+                      <Badge className="bg-amber-100 text-amber-700 font-bold border-none text-[10px]">NEW</Badge>
                     </div>
-                    <p className="text-xs font-medium text-primary">Rent: ₹{listing.rent} | Contact: {listing.contactNumber}</p>
+                    <div className="flex items-center justify-center sm:justify-start text-sm text-muted-foreground font-medium">
+                      <MapPin className="h-4 w-4 mr-1 text-primary" /> {listing.area}, {listing.city}
+                    </div>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-4 pt-1">
+                      <p className="text-sm font-bold text-primary">₹{listing.rent}/mo</p>
+                      <p className="text-sm font-medium text-muted-foreground">Owner: {listing.contactNumber}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => updateStatus(listing.id, "approved")} className="bg-green-600 hover:bg-green-700">
-                      <Check className="h-4 w-4 mr-1" /> Approve
+                  <div className="flex gap-3 shrink-0">
+                    <Button onClick={() => updateStatus(listing.id, "approved")} className="bg-green-600 hover:bg-green-700 rounded-xl px-6 font-bold shadow-lg shadow-green-200">
+                      <Check className="h-4 w-4 mr-2" /> Approve
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => updateStatus(listing.id, "rejected")}>
-                      <X className="h-4 w-4 mr-1" /> Reject
+                    <Button variant="outline" onClick={() => updateStatus(listing.id, "rejected")} className="rounded-xl text-destructive hover:bg-destructive/10 border-destructive/20 font-bold">
+                      <X className="h-4 w-4 mr-2" /> Reject
                     </Button>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={`/tenant/property/${listing.id}`} target="_blank"><ExternalLink className="h-4 w-4" /></a>
+                    <Button variant="ghost" size="icon" className="rounded-xl" asChild>
+                      <a href={`/tenant/property/${listing.id}`} target="_blank"><ExternalLink className="h-5 w-5" /></a>
                     </Button>
                   </div>
                 </CardContent>
@@ -103,40 +133,45 @@ export default function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm italic">No pending listings to review.</p>
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border border-dashed">
+            <ShieldCheck className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
+            <p className="text-muted-foreground font-bold italic">Queue is clear! No pending approvals.</p>
+          </div>
         )}
       </div>
 
       <div className="space-y-6">
-        <h2 className="text-xl font-bold">History & Other Listings</h2>
-        <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
+        <h2 className="text-2xl font-bold font-headline">Operations History</h2>
+        <div className="bg-white rounded-[2rem] border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/30 border-b">
                 <tr>
-                  <th className="p-4 font-bold">Property</th>
-                  <th className="p-4 font-bold">Status</th>
-                  <th className="p-4 font-bold">Owner</th>
-                  <th className="p-4 font-bold text-right">Actions</th>
+                  <th className="p-6 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Property</th>
+                  <th className="p-6 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Status</th>
+                  <th className="p-6 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Owner</th>
+                  <th className="p-6 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {otherListings.map(listing => (
-                  <tr key={listing.id} className="hover:bg-muted/30">
-                    <td className="p-4">
-                      <div className="font-bold">{listing.pgName}</div>
-                      <div className="text-xs text-muted-foreground">{listing.city}</div>
+                {properties.filter(p => p.status !== "pending").map(listing => (
+                  <tr key={listing.id} className="hover:bg-muted/10 transition-colors">
+                    <td className="p-6">
+                      <div className="font-bold text-base">{listing.pgName}</div>
+                      <div className="text-xs text-muted-foreground font-medium">{listing.city}</div>
                     </td>
-                    <td className="p-4">
-                      <Badge className={listing.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                    <td className="p-6">
+                      <Badge className={`rounded-lg font-bold border-none px-3 py-1 ${
+                        listing.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
                         {listing.status.toUpperCase()}
                       </Badge>
                     </td>
-                    <td className="p-4 text-xs">
-                      {listing.contactNumber}
+                    <td className="p-6">
+                      <p className="font-medium text-xs">{listing.contactNumber}</p>
                     </td>
-                    <td className="p-4 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => deleteListing(listing.id)} className="text-red-500 hover:bg-red-50">
+                    <td className="p-6 text-right">
+                      <Button variant="ghost" size="icon" onClick={() => deleteListing(listing.id)} className="text-destructive hover:bg-destructive/10 rounded-xl">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
