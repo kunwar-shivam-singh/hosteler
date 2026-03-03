@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
@@ -22,12 +21,12 @@ const ROOM_TYPES = ["Single Sharing", "Double Sharing", "Triple Sharing", "Four 
 const AMENITIES_LIST = ["WiFi", "Laundry", "Meals Included", "AC", "Power Backup", "CCTV", "Gym", "Parking"];
 
 export default function AddPropertyPage() {
-  const { user, firestore: db, storage } = useFirebase();
+  const { user, firestore: db } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
@@ -64,13 +63,13 @@ export default function AddPropertyPage() {
       : [...list, item];
   };
 
-  const uploadWithTimeout = async (imageRef: any, file: File, timeoutMs = 30000) => {
-    return Promise.race([
-      uploadBytes(imageRef, file),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Upload timed out. Please ensure Firebase Storage is enabled in your console and the bucket is initialized.")), timeoutMs)
-      )
-    ]);
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,30 +86,18 @@ export default function AddPropertyPage() {
     }
 
     setIsLoading(true);
-    setUploadProgress("Preparing to upload...");
+    setStatusMessage("Processing images...");
 
     try {
-      const imageUrls: string[] = [];
-      
-      for (let i = 0; i < images.length; i++) {
-        const image = images[i];
-        setUploadProgress(`Uploading photo ${i + 1} of ${images.length}...`);
-        
-        const fileName = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const imagePath = `properties/${user.uid}/${fileName}`;
-        const imageRef = ref(storage, imagePath);
-        
-        try {
-          const uploadResult: any = await uploadWithTimeout(imageRef, image);
-          const url = await getDownloadURL(uploadResult.ref);
-          imageUrls.push(url);
-        } catch (uploadErr: any) {
-          console.error("UPLOAD ERROR:", uploadErr);
-          throw new Error(uploadErr.message || `Failed to upload photo ${i + 1}`);
-        }
+      // Convert images to Base64 strings instead of uploading to Storage
+      // This is a temporary workaround for Storage issues
+      const base64Images: string[] = [];
+      for (const image of images) {
+        const base64 = await fileToBase64(image);
+        base64Images.push(base64);
       }
 
-      setUploadProgress("Saving property details...");
+      setStatusMessage("Saving property details...");
       const propertiesRef = collection(db, "properties");
       
       const propertyData = {
@@ -123,9 +110,9 @@ export default function AddPropertyPage() {
         contactNumber: formData.contactNumber,
         description: formData.description,
         roomTypes: formData.roomTypes,
-        amenities: formData.amenities, // Only includes manually checked items
+        amenities: formData.amenities,
         ownerId: user.uid,
-        images: imageUrls,
+        images: base64Images,
         status: "pending",
         createdAt: new Date().toISOString(),
       };
@@ -143,15 +130,14 @@ export default function AddPropertyPage() {
       toast({ 
         variant: "destructive", 
         title: "Submission Failed", 
-        description: error.message || "An unexpected error occurred during publishing." 
+        description: "An error occurred while creating. Try refreshing the page" 
       });
       setIsLoading(false);
-      setUploadProgress("");
+      setStatusMessage("");
     }
   };
 
   const applyAIResult = (description: string) => {
-    // We only apply the description, ignoring suggested amenities per your preference
     setFormData((prev) => ({
       ...prev,
       description
@@ -168,7 +154,7 @@ export default function AddPropertyPage() {
         <Alert className="bg-primary/10 border-primary/20 text-primary animate-pulse">
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertTitle>Publishing in progress</AlertTitle>
-          <AlertDescription>{uploadProgress}</AlertDescription>
+          <AlertDescription>{statusMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -357,17 +343,8 @@ export default function AddPropertyPage() {
                   </label>
                 )}
               </div>
+              <p className="text-[10px] text-muted-foreground italic mt-2">Note: Photos are encoded directly into the listing for instant publishing.</p>
             </div>
-
-            {isLoading && (
-              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex gap-3 items-start">
-                <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
-                <div className="text-sm text-yellow-800">
-                  <p className="font-bold">Important Notice</p>
-                  <p>If this stays on "Publishing" for more than 30 seconds, please ensure you have clicked <strong>"Get Started"</strong> in the Storage section of your Firebase Console.</p>
-                </div>
-              </div>
-            )}
 
             <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl" disabled={isLoading}>
               {isLoading ? (
