@@ -29,6 +29,7 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
+      // Removed orderBy to avoid requiring composite indexes
       const q = query(
         collection(db, "properties"),
         where("ownerId", "==", user.uid)
@@ -36,6 +37,7 @@ export default function OwnerDashboard() {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
+      // Client-side sort
       results.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();

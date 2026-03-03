@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, getDocs, doc } from "firebase/firestore";
+import { collection, query, getDocs, doc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Trash2, MapPin, ExternalLink, ShieldCheck, Users, Home, Clock, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, Check, X, Trash2, MapPin, ExternalLink, ShieldCheck, Home, Clock, AlertTriangle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 
 export default function AdminDashboard() {
@@ -30,9 +30,18 @@ export default function AdminDashboard() {
     if (!db) return;
     setLoading(true);
     try {
-      const q = query(collection(db, "properties"), orderBy("createdAt", "desc"));
+      // Removed orderBy to avoid requiring composite indexes
+      const q = query(collection(db, "properties"));
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Client-side sort
+      results.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
       setProperties(results);
     } catch (error: any) {
       console.error("Error fetching properties:", error);

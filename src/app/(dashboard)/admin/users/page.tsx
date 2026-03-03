@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,9 +27,18 @@ export default function AdminUsersPage() {
     if (!db) return;
     setLoading(true);
     try {
-      const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+      // Removed orderBy to avoid requiring composite indexes
+      const q = query(collection(db, "users"));
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Client-side sort
+      results.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
       setUsers(results);
     } catch (error: any) {
       console.error("Error fetching users:", error);

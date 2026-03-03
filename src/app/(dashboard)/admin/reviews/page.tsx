@@ -1,14 +1,13 @@
 
 "use client";
 
-import { useState } from "react";
-import { collection, query, orderBy, doc, deleteDoc, getDoc } from "firebase/firestore";
+import { useMemo } from "react";
+import { collection, query, doc, deleteDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useMemoFirebase, useCollection } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Star, Trash2, Loader2, ShieldAlert, User, Home, AlertTriangle } from "lucide-react";
 
@@ -17,13 +16,23 @@ export default function AdminReviewsPage() {
   const { role, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  // Defensive query initialization to prevent permission errors
   const reviewsQuery = useMemoFirebase(() => {
     if (!db || role !== "admin") return null;
-    return query(collection(db, "reviews"), orderBy("createdAt", "desc"));
+    // Removed orderBy to avoid requiring composite indexes
+    return query(collection(db, "reviews"));
   }, [db, role]);
 
   const { data: reviews, isLoading } = useCollection(reviewsQuery);
+
+  // Client-side sort
+  const sortedReviews = useMemo(() => {
+    if (!reviews) return [];
+    return [...reviews].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [reviews]);
 
   const handleDelete = async (review: any) => {
     if (!db || !confirm("Delete this review permanently?")) return;
@@ -31,7 +40,6 @@ export default function AdminReviewsPage() {
     try {
       await deleteDoc(doc(db, "reviews", review.id));
 
-      // Attempt to fix property stats
       if (review.propertyId) {
         const propRef = doc(db, "properties", review.propertyId);
         const propSnap = await getDoc(propRef);
@@ -80,14 +88,14 @@ export default function AdminReviewsPage() {
             <ShieldAlert className="h-5 w-5 text-primary" />
             Global Reviews
           </CardTitle>
-          <CardDescription>Total reviews: {reviews?.length || 0}</CardDescription>
+          <CardDescription>Total reviews: {sortedReviews.length}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-20">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
-          ) : reviews && reviews.length > 0 ? (
+          ) : sortedReviews.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/30 border-b">
@@ -100,7 +108,7 @@ export default function AdminReviewsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {reviews.map((review) => (
+                  {sortedReviews.map((review: any) => (
                     <tr key={review.id} className="hover:bg-muted/10 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-2">

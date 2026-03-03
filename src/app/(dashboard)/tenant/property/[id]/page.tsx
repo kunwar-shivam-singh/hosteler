@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, collection, query, where, orderBy, addDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, addDoc, deleteDoc } from "firebase/firestore";
 import { useFirebase, useMemoFirebase, useCollection } from "@/firebase";
+import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,14 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, 
   IndianRupee, 
-  Bed, 
   Phone, 
   ArrowLeft, 
   Loader2, 
   MessageSquare,
-  CheckCircle2,
-  Calendar,
-  Share2,
   Star,
   Trash2,
   User
@@ -30,7 +27,8 @@ import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 export default function PropertyDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, firestore: db, userName } = useFirebase();
+  const { user, userName } = useAuth();
+  const { firestore: db } = useFirebase();
   const { toast } = useToast();
   
   const [property, setProperty] = useState<any>(null);
@@ -61,14 +59,24 @@ export default function PropertyDetailsPage() {
 
   const reviewsQuery = useMemoFirebase(() => {
     if (!db || !id) return null;
+    // Removed orderBy to avoid requiring composite indexes
     return query(
       collection(db, "reviews"),
-      where("propertyId", "==", id),
-      orderBy("createdAt", "desc")
+      where("propertyId", "==", id)
     );
   }, [db, id]);
 
   const { data: reviews, isLoading: reviewsLoading } = useCollection(reviewsQuery);
+
+  // Client-side sort for reviews
+  const sortedReviews = useMemo(() => {
+    if (!reviews) return [];
+    return [...reviews].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [reviews]);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,7 +165,6 @@ export default function PropertyDetailsPage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back
       </Button>
 
-      {/* Image Gallery */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-3xl overflow-hidden shadow-lg border bg-white">
         <div className="relative aspect-video md:aspect-square">
           <Image 
@@ -239,8 +246,8 @@ export default function PropertyDetailsPage() {
             <div className="space-y-4">
               {reviewsLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" />
-              ) : reviews && reviews.length > 0 ? (
-                reviews.map((review) => (
+              ) : sortedReviews.length > 0 ? (
+                sortedReviews.map((review: any) => (
                   <div key={review.id} className="p-4 rounded-2xl border bg-muted/5 space-y-2 relative group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
