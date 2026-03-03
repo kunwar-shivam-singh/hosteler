@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Trash2, Loader2, ShieldAlert, User, Home, Calendar, AlertTriangle } from "lucide-react";
+import { Star, Trash2, Loader2, ShieldAlert, User, Home, AlertTriangle } from "lucide-react";
 
 export default function AdminReviewsPage() {
   const { firestore: db } = useFirebase();
@@ -31,21 +31,23 @@ export default function AdminReviewsPage() {
       await deleteDoc(doc(db, "reviews", review.id));
 
       // Attempt to fix property stats
-      const propRef = doc(db, "properties", review.propertyId);
-      const propSnap = await getDoc(propRef);
-      
-      if (propSnap.exists()) {
-        const propData = propSnap.data();
-        const currentReviewCount = propData.reviewCount || 1;
-        const currentAvgRating = propData.avgRating || 0;
+      if (review.propertyId) {
+        const propRef = doc(db, "properties", review.propertyId);
+        const propSnap = await getDoc(propRef);
         
-        const newReviewCount = Math.max(0, currentReviewCount - 1);
-        const newAvgRating = newReviewCount === 0 ? 0 : ((currentAvgRating * currentReviewCount) - review.rating) / newReviewCount;
-        
-        updateDocumentNonBlocking(propRef, {
-          avgRating: newAvgRating,
-          reviewCount: newReviewCount
-        });
+        if (propSnap.exists()) {
+          const propData = propSnap.data();
+          const currentReviewCount = propData.reviewCount || 1;
+          const currentAvgRating = propData.avgRating || 0;
+          
+          const newReviewCount = Math.max(0, currentReviewCount - 1);
+          const newAvgRating = newReviewCount === 0 ? 0 : ((currentAvgRating * currentReviewCount) - (review.rating || 0)) / newReviewCount;
+          
+          updateDocumentNonBlocking(propRef, {
+            avgRating: newAvgRating,
+            reviewCount: newReviewCount
+          });
+        }
       }
 
       toast({ title: "Review Deleted", description: "Property statistics updated." });
@@ -89,7 +91,7 @@ export default function AdminReviewsPage() {
                 <thead className="bg-muted/30 border-b">
                   <tr>
                     <th className="p-4 font-bold">Reviewer</th>
-                    <th className="p-4 font-bold">Listing</th>
+                    <th className="p-4 font-bold">Listing ID</th>
                     <th className="p-4 font-bold">Rating</th>
                     <th className="p-4 font-bold">Comment</th>
                     <th className="p-4 font-bold text-right">Actions</th>
@@ -101,24 +103,26 @@ export default function AdminReviewsPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <User className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-bold">{review.userName}</span>
+                          <span className="font-bold">{review.userName || "Anonymous"}</span>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-1 text-xs font-medium text-primary">
                           <Home className="h-3 w-3" />
-                          {review.propertyId.substring(0, 8)}...
+                          <span className="truncate max-w-[100px]">
+                            {review.propertyId ? `${review.propertyId.substring(0, 8)}...` : "N/A"}
+                          </span>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} className={`h-3 w-3 ${s <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-200'}`} />
+                            <Star key={s} className={`h-3 w-3 ${s <= (review.rating || 0) ? 'text-amber-500 fill-amber-500' : 'text-gray-200'}`} />
                           ))}
                         </div>
                       </td>
                       <td className="p-4">
-                        <p className="max-w-xs truncate italic text-muted-foreground">"{review.comment}"</p>
+                        <p className="max-w-xs truncate italic text-muted-foreground">"{review.comment || "No comment"}"</p>
                       </td>
                       <td className="p-4 text-right">
                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => handleDelete(review)}>

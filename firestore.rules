@@ -3,7 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper function to check if a user is an admin
-    // Checks both the roles_admin collection and the user profile for extra security
     function isAdmin() {
       return request.auth != null && (
         exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
@@ -26,9 +25,6 @@ service cloud.firestore {
     }
 
     match /properties/{propertyId} {
-      // Tenants can read approved properties
-      // Owners can read their own properties
-      // Admins can read everything
       allow read: if (resource == null || resource.data.status == 'approved') 
                   || (request.auth != null && (resource.data.ownerId == request.auth.uid || isAdmin()));
       
@@ -40,8 +36,8 @@ service cloud.firestore {
     }
 
     match /reviews/{reviewId} {
-      // Explicitly allow list and get for everyone to facilitate property discovery
-      allow read: if true;
+      // Robust read permissions for reviews to facilitate discovery and moderation
+      allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if (request.auth != null && resource.data.userId == request.auth.uid)
                             || isAdmin();

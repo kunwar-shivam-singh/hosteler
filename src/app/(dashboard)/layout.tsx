@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const segments = pathname.split('/');
         const roleInPath = segments[1]; // 'admin', 'tenant', 'owner'
         
+        // Only validate if we are in a role-prefixed route
         if (['admin', 'tenant', 'owner'].includes(roleInPath) && roleInPath !== role) {
           console.warn(`Redirecting unauthorized access: ${role} tried to access ${roleInPath}`);
           router.push(`/${role}/dashboard`);
@@ -82,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ],
   };
 
-  const currentNav = role ? navItems[role] : [];
+  const currentNav = role ? navItems[role as keyof typeof navItems] : [];
   const dashboardHome = role ? `/${role}/dashboard` : "/";
 
   return (
@@ -100,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         <nav className="flex-1 px-6 space-y-2">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-4">Main Menu</p>
-          {currentNav.map((item) => {
+          {currentNav.map((item: any) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -180,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t flex justify-around items-center h-20 px-4 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        {currentNav.slice(0, 4).map((item) => {
+        {currentNav.slice(0, 4).map((item: any) => {
           const isActive = pathname === item.href;
           return (
             <Link
