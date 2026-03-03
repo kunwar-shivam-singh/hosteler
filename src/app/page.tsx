@@ -31,13 +31,6 @@ export default function LandingPage() {
   const [cmsData, setCmsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Smart redirect: If logged in, go to dashboard
-  useEffect(() => {
-    if (!authLoading && user && role) {
-      router.push(`/${role}/dashboard`);
-    }
-  }, [user, role, authLoading, router]);
-
   useEffect(() => {
     async function fetchCms() {
       if (!db) return;

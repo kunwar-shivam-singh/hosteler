@@ -4,11 +4,11 @@
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { Home, Menu, X, LayoutDashboard } from "lucide-react";
+import { Home, Menu, X, LayoutDashboard, User } from "lucide-react";
 import { useState } from "react";
 
 export function MarketingNavbar() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, userName } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -48,10 +48,10 @@ export function MarketingNavbar() {
 
           <div className="hidden md:flex items-center space-x-4">
             {!loading && user && role ? (
-              <Button asChild className="rounded-full px-6">
+              <Button asChild className="rounded-full px-6 flex items-center gap-2">
                 <Link href={`/${role}/dashboard`}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="truncate max-w-[120px]">Hi, {userName?.split(' ')[0] || 'User'}</span>
                 </Link>
               </Button>
             ) : (
@@ -94,7 +94,9 @@ export function MarketingNavbar() {
           <div className="border-t pt-4 pb-2 px-3 flex flex-col gap-3">
              {!loading && user && role ? (
                 <Button asChild className="w-full">
-                  <Link href={`/${role}/dashboard`}>Go to Dashboard</Link>
+                  <Link href={`/${role}/dashboard`}>
+                    Go to Dashboard ({userName?.split(' ')[0]})
+                  </Link>
                 </Button>
              ) : (
                <>
