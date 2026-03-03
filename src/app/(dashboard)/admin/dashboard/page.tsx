@@ -4,25 +4,27 @@
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, getDocs, doc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
+import { useAuth } from "@/context/auth-context";
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Trash2, MapPin, ExternalLink, ShieldCheck, Users, Home, Clock } from "lucide-react";
+import { Loader2, Check, X, Trash2, MapPin, ExternalLink, ShieldCheck, Users, Home, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 
 export default function AdminDashboard() {
+  const { role, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (db) {
+    if (db && role === "admin") {
       fetchProperties();
     }
-  }, [db]);
+  }, [db, role]);
 
   const fetchProperties = async () => {
     if (!db) return;
@@ -34,7 +36,7 @@ export default function AdminDashboard() {
       setProperties(results);
     } catch (error: any) {
       console.error("Error fetching properties:", error);
-      toast({ variant: "destructive", title: "Fetch Failed", description: "Could not load listings." });
+      toast({ variant: "destructive", title: "Fetch Failed", description: "Could not load listings. Access might be restricted." });
     } finally {
       setLoading(false);
     }
@@ -56,6 +58,15 @@ export default function AdminDashboard() {
     setProperties(prev => prev.filter(p => p.id !== id));
     toast({ title: "Listing Deleted", description: "The listing has been removed." });
   };
+
+  if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+  if (role !== "admin") return (
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+      <AlertTriangle className="h-12 w-12 text-destructive" />
+      <h2 className="text-2xl font-bold">Unauthorized Access</h2>
+      <p className="text-muted-foreground">This panel is restricted to platform administrators only.</p>
+    </div>
+  );
 
   const pendingListings = properties.filter(p => p.status === "pending");
   

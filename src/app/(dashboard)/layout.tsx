@@ -31,10 +31,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (role) {
+        // Enforce role-based routing to prevent cross-role access and permission errors
+        const segments = pathname.split('/');
+        const roleInPath = segments[1]; // 'admin', 'tenant', 'owner'
+        
+        if (['admin', 'tenant', 'owner'].includes(roleInPath) && roleInPath !== role) {
+          console.warn(`Redirecting unauthorized access: ${role} tried to access ${roleInPath}`);
+          router.push(`/${role}/dashboard`);
+        }
+      }
     }
-  }, [user, loading, router]);
+  }, [user, role, loading, router, pathname]);
 
   if (loading) {
     return (

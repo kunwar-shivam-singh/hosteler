@@ -4,21 +4,23 @@
 import { useState } from "react";
 import { collection, query, orderBy, doc, deleteDoc, getDoc } from "firebase/firestore";
 import { useFirebase, useMemoFirebase, useCollection } from "@/firebase";
+import { useAuth } from "@/context/auth-context";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Trash2, Loader2, ShieldAlert, User, Home, Calendar } from "lucide-react";
+import { Star, Trash2, Loader2, ShieldAlert, User, Home, Calendar, AlertTriangle } from "lucide-react";
 
 export default function AdminReviewsPage() {
   const { firestore: db } = useFirebase();
+  const { role, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const reviewsQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || role !== "admin") return null;
     return query(collection(db, "reviews"), orderBy("createdAt", "desc"));
-  }, [db]);
+  }, [db, role]);
 
   const { data: reviews, isLoading } = useCollection(reviewsQuery);
 
@@ -51,6 +53,15 @@ export default function AdminReviewsPage() {
       toast({ variant: "destructive", title: "Action Failed", description: error.message });
     }
   };
+
+  if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+  if (role !== "admin") return (
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+      <AlertTriangle className="h-12 w-12 text-destructive" />
+      <h2 className="text-2xl font-bold">Unauthorized Access</h2>
+      <p className="text-muted-foreground">This panel is restricted to platform administrators only.</p>
+    </div>
+  );
 
   return (
     <div className="space-y-8">
