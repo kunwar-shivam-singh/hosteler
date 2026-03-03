@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/context/auth-context";
@@ -114,7 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const isActive = pathname === item.href;
             return (
               <Link
-                key={item.href}
+                key={item.label}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all group ${
                   isActive 
@@ -210,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const isActive = pathname === item.href;
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={`flex flex-col items-center justify-center gap-1.5 min-w-[64px] transition-all ${
                 isActive ? "text-primary" : "text-muted-foreground"
