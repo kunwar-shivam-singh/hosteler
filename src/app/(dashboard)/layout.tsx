@@ -19,7 +19,7 @@ import {
   Settings,
   Bell,
   Star,
-  MessageSquare
+  Globe
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -66,11 +66,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = {
     tenant: [
+      { label: "Dashboard", href: "/tenant/dashboard", icon: LayoutDashboard },
       { label: "Explorer", href: "/tenant/dashboard", icon: Search },
       { label: "Profile", href: "/tenant/profile", icon: User },
     ],
     owner: [
-      { label: "Insights", href: "/owner/dashboard", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/owner/dashboard", icon: LayoutDashboard },
       { label: "Add PG", href: "/owner/add", icon: PlusCircle },
       { label: "Reviews", href: "/owner/reviews", icon: Star },
       { label: "Profile", href: "/owner/profile", icon: User },
@@ -91,7 +92,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-72 flex-col fixed inset-y-0 z-50 bg-white border-r">
         <div className="p-8">
-          <Link className="flex items-center space-x-3" href={dashboardHome}>
+          <Link className="flex items-center space-x-3" href="/">
             <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
               <Home className="h-6 w-6 text-white" />
             </div>
@@ -101,6 +102,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         <nav className="flex-1 px-6 space-y-2">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-4">Main Menu</p>
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all group text-muted-foreground hover:bg-primary/5 hover:text-primary"
+          >
+            <Globe className="h-5 w-5" />
+            Public Home
+          </Link>
+          <div className="h-px bg-muted mx-4 my-2"></div>
           {currentNav.map((item: any) => {
             const isActive = pathname === item.href;
             return (
@@ -146,6 +155,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {pathname.split('/').pop()?.replace('-', ' ') || "Dashboard"}
           </h2>
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="rounded-xl relative" asChild>
+               <Link href="/">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+               </Link>
+            </Button>
             <Button variant="ghost" size="icon" className="rounded-xl relative">
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white"></span>
@@ -162,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile Header */}
         <header className="lg:hidden flex h-16 items-center justify-between px-6 bg-white border-b sticky top-0 z-40">
-          <Link className="flex items-center space-x-2" href={dashboardHome}>
+          <Link className="flex items-center space-x-2" href="/">
             <div className="bg-primary p-1.5 rounded-lg">
               <Home className="h-4 w-4 text-white" />
             </div>
@@ -181,7 +195,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t flex justify-around items-center h-20 px-4 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        {currentNav.slice(0, 4).map((item: any) => {
+        <Link
+          href="/"
+          className={`flex flex-col items-center justify-center gap-1.5 min-w-[64px] transition-all ${
+            pathname === "/" ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          <div className={`p-2 rounded-2xl transition-all ${pathname === "/" ? "bg-primary/10" : ""}`}>
+            <Home className="h-6 w-6" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-tight">Home</span>
+        </Link>
+        {currentNav.slice(0, 3).map((item: any) => {
           const isActive = pathname === item.href;
           return (
             <Link

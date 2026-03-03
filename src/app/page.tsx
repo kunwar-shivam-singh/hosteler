@@ -1,7 +1,10 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { doc, getDoc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, 
@@ -12,19 +15,63 @@ import {
   Users, 
   MapPin, 
   Heart,
-  Star
+  Star,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import { MarketingNavbar } from "@/components/marketing-navbar";
 import { MarketingFooter } from "@/components/marketing-footer";
 
 export default function LandingPage() {
+  const db = useFirestore();
+  const [cmsData, setCmsData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCms() {
+      if (!db) return;
+      try {
+        const docRef = doc(db, "siteContent", "homepage");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setCmsData(docSnap.data());
+        }
+      } catch (error) {
+        console.error("Error fetching CMS data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCms();
+  }, [db]);
+
   const popularAreas = [
     { name: "Mumbai", count: "120+ Listings", img: "https://picsum.photos/seed/mumbai/400/300" },
     { name: "Bangalore", count: "85+ Listings", img: "https://picsum.photos/seed/bangalore/400/300" },
     { name: "Delhi", count: "110+ Listings", img: "https://picsum.photos/seed/delhi/400/300" },
     { name: "Pune", count: "60+ Listings", img: "https://picsum.photos/seed/pune/400/300" },
   ];
+
+  // Default Fallbacks
+  const content = {
+    heroTitle: cmsData?.heroTitle || "Your Perfect Stay is Just One Tap Away",
+    heroSubtitle: cmsData?.heroSubtitle || "Find verified PGs and Hostels with zero brokerage. Simple, transparent, and built for modern living.",
+    tagline: cmsData?.tagline || "Now AI-Powered Listing Enhancements",
+    aboutText: cmsData?.aboutText || "PG Locator helps students and professionals find verified PGs and hostels without brokers. Owners can list properties for free and connect directly with tenants.",
+    features: cmsData?.features || [
+      { title: "Verified Stays", desc: "Every listing is manually approved by our team to ensure safety and quality standards." },
+      { title: "Community Reviews", desc: "Read honest feedback from fellow residents before you make your decision." },
+      { title: "Zero Brokerage", desc: "We connect you directly with owners. No hidden fees, no middle-men commissions." }
+    ]
+  };
+
+  if (loading && !cmsData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -37,13 +84,13 @@ export default function LandingPage() {
             <div className="flex flex-col items-center text-center space-y-8">
               <div className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary animate-bounce">
                 <Sparkles className="mr-2 h-4 w-4" />
-                Now AI-Powered Listing Enhancements
+                {content.tagline}
               </div>
               <h1 className="max-w-4xl text-5xl font-black tracking-tight sm:text-6xl md:text-7xl font-headline text-foreground">
-                Your Perfect Stay is Just <span className="text-primary italic">One Tap</span> Away
+                {content.heroTitle}
               </h1>
               <p className="mx-auto max-w-2xl text-muted-foreground md:text-xl font-medium">
-                Find verified PGs and Hostels with zero brokerage. Simple, transparent, and built for modern living.
+                {content.heroSubtitle}
               </p>
               
               <div className="w-full max-w-2xl bg-white p-2 rounded-3xl shadow-2xl border flex flex-col sm:flex-row gap-2">
@@ -172,18 +219,18 @@ export default function LandingPage() {
              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div className="p-10 bg-primary/5 rounded-[3rem] border border-primary/10 space-y-4">
                    <div className="bg-primary text-white p-4 rounded-2xl w-fit"><ShieldCheck className="h-8 w-8" /></div>
-                   <h3 className="text-2xl font-black">Verified Stays</h3>
-                   <p className="text-muted-foreground font-medium">Every listing is manually approved by our team to ensure safety and quality standards.</p>
+                   <h3 className="text-2xl font-black">{content.features[0]?.title}</h3>
+                   <p className="text-muted-foreground font-medium">{content.features[0]?.desc}</p>
                 </div>
                 <div className="p-10 bg-orange-50 rounded-[3rem] border border-orange-100 space-y-4">
                    <div className="bg-orange-500 text-white p-4 rounded-2xl w-fit"><Star className="h-8 w-8" /></div>
-                   <h3 className="text-2xl font-black">Community Reviews</h3>
-                   <p className="text-muted-foreground font-medium">Read honest feedback from fellow residents before you make your decision.</p>
+                   <h3 className="text-2xl font-black">{content.features[1]?.title}</h3>
+                   <p className="text-muted-foreground font-medium">{content.features[1]?.desc}</p>
                 </div>
                 <div className="p-10 bg-blue-50 rounded-[3rem] border border-blue-100 space-y-4">
                    <div className="bg-blue-600 text-white p-4 rounded-2xl w-fit"><Heart className="h-8 w-8" /></div>
-                   <h3 className="text-2xl font-black">Zero Brokerage</h3>
-                   <p className="text-muted-foreground font-medium">We connect you directly with owners. No hidden fees, no middle-men commissions.</p>
+                   <h3 className="text-2xl font-black">{content.features[2]?.title}</h3>
+                   <p className="text-muted-foreground font-medium">{content.features[2]?.desc}</p>
                 </div>
              </div>
           </div>
@@ -195,7 +242,7 @@ export default function LandingPage() {
             <div className="max-w-3xl">
               <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">We're on a mission to simplify urban living.</h2>
               <p className="text-xl md:text-2xl font-medium opacity-90 mb-10 leading-relaxed">
-                PG Locator helps students and professionals find verified PGs and hostels without brokers. Owners can list properties for free and connect directly with tenants.
+                {content.aboutText}
               </p>
               <Button asChild variant="secondary" size="lg" className="rounded-2xl h-16 px-10 text-lg font-bold">
                 <Link href="/about">Read Our Story</Link>
