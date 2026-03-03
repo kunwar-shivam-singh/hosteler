@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -34,12 +33,12 @@ export function MarketingFooter() {
           </div>
 
           <div>
-            <h4 className="font-bold mb-6">Support</h4>
+            <h4 className="font-bold mb-6">Resources</h4>
             <ul className="space-y-4 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Trust & Safety</Link></li>
+              <li><Link href="/help-center" className="hover:text-primary transition-colors">Help Center</Link></li>
+              <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/trust-safety" className="hover:text-primary transition-colors">Trust &amp; Safety</Link></li>
             </ul>
           </div>
 

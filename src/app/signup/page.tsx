@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
@@ -26,6 +27,8 @@ export default function SignupPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -36,6 +39,10 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreed) {
+      toast({ variant: "destructive", title: "Consent Required", description: "Please agree to our terms and policies." });
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -53,6 +60,7 @@ export default function SignupPage() {
         phone: formData.phone,
         role: formData.role,
         createdAt: new Date().toISOString(),
+        termsAcceptedAt: new Date().toISOString(),
       });
 
       await batch.commit();
@@ -158,7 +166,23 @@ export default function SignupPage() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full rounded-xl" disabled={isLoading}>
+
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox 
+                id="terms" 
+                checked={agreed} 
+                onCheckedChange={(val) => setAgreed(!!val)} 
+                className="mt-1"
+              />
+              <Label htmlFor="terms" className="text-xs leading-relaxed font-medium text-muted-foreground">
+                I agree to the{" "}
+                <Link href="/terms" className="text-primary hover:underline font-bold">Terms of Service</Link>,{" "}
+                <Link href="/privacy" className="text-primary hover:underline font-bold">Privacy Policy</Link>, and{" "}
+                <Link href="/trust-safety" className="text-primary hover:underline font-bold">Trust &amp; Safety</Link> guidelines.
+              </Label>
+            </div>
+
+            <Button type="submit" className="w-full rounded-xl h-12 text-base font-bold" disabled={isLoading || !agreed}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
