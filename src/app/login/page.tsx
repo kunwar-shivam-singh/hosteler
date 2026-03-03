@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Loader2, User, UserCog, UserCheck } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,11 +41,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const quickFill = (role: string) => {
-    setEmail(`${role}@test.com`);
-    setPassword("password123");
   };
 
   return (
@@ -96,28 +91,6 @@ export default function LoginPage() {
           </div>
         </CardFooter>
       </Card>
-
-      {/* Demo Credentials Helper */}
-      <div className="w-full max-w-md space-y-3">
-        <p className="text-xs font-bold text-center text-muted-foreground uppercase tracking-widest">Testing / Demo Accounts</p>
-        <div className="grid grid-cols-3 gap-2">
-          <Button variant="outline" size="sm" onClick={() => quickFill('tenant')} className="rounded-xl bg-white flex flex-col h-auto py-3">
-            <User className="h-4 w-4 mb-1 text-blue-500" />
-            <span className="text-[10px]">Tenant</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => quickFill('owner')} className="rounded-xl bg-white flex flex-col h-auto py-3">
-            <UserCheck className="h-4 w-4 mb-1 text-green-500" />
-            <span className="text-[10px]">Owner</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => quickFill('admin')} className="rounded-xl bg-white flex flex-col h-auto py-3">
-            <UserCog className="h-4 w-4 mb-1 text-red-500" />
-            <span className="text-[10px]">Admin</span>
-          </Button>
-        </div>
-        <p className="text-[10px] text-center text-muted-foreground italic">
-          Note: You must first create these accounts on the <Link href="/signup" className="underline">Signup page</Link> using password "password123".
-        </p>
-      </div>
     </div>
   );
 }

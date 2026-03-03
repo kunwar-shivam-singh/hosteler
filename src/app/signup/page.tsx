@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, writeBatch } from "firebase/firestore";
+import { doc, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,11 @@ import { Home, Loader2 } from "lucide-react";
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRole = (searchParams.get("role") as "tenant" | "owner" | "admin") || "tenant";
+  
+  // Restrict signup to tenant or owner only. Admin must be assigned manually.
+  const rawRole = searchParams.get("role");
+  const initialRole = (rawRole === "owner") ? "owner" : "tenant";
+  
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +30,7 @@ export default function SignupPage() {
     email: "",
     phone: "",
     password: "",
-    role: initialRole,
+    role: initialRole as "tenant" | "owner",
   });
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -49,18 +53,6 @@ export default function SignupPage() {
         role: formData.role,
         createdAt: new Date().toISOString(),
       });
-
-      // 2. If Admin, also register in roles_admin for security rule validation
-      if (formData.role === "admin") {
-        const adminRef = doc(db, "roles_admin", user.uid);
-        batch.set(adminRef, {
-          id: user.uid,
-          name: formData.name,
-          email: formData.email,
-          role: "admin",
-          createdAt: new Date().toISOString(),
-        });
-      }
 
       await batch.commit();
 
@@ -99,10 +91,6 @@ export default function SignupPage() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="owner" id="owner" />
                   <Label htmlFor="owner" className="cursor-pointer">Owner</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="admin" id="admin" />
-                  <Label htmlFor="admin" className="cursor-pointer">Admin</Label>
                 </div>
               </RadioGroup>
             </div>
