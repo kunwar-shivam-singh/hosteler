@@ -69,13 +69,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const currentNav = role ? navItems[role] : [];
+  const dashboardHome = role ? `/${role}/dashboard` : "/";
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-72 flex-col fixed inset-y-0 z-50 bg-white border-r">
         <div className="p-8">
-          <Link className="flex items-center space-x-3" href="/">
+          <Link className="flex items-center space-x-3" href={dashboardHome}>
             <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
               <Home className="h-6 w-6 text-white" />
             </div>
@@ -146,7 +147,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile Header */}
         <header className="lg:hidden flex h-16 items-center justify-between px-6 bg-white border-b sticky top-0 z-40">
-          <Link className="flex items-center space-x-2" href="/">
+          <Link className="flex items-center space-x-2" href={dashboardHome}>
             <div className="bg-primary p-1.5 rounded-lg">
               <Home className="h-4 w-4 text-white" />
             </div>

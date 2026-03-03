@@ -1,18 +1,38 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Search, Home, ShieldCheck } from "lucide-react";
+import { ArrowRight, Search, Home, ShieldCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 export default function LandingPage() {
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const { user, role, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    // Setting state in useEffect prevents hydration mismatch for dates/years
     setCurrentYear(new Date().getFullYear());
   }, []);
+
+  useEffect(() => {
+    // If user is already logged in, redirect them to their dashboard
+    if (!loading && user && role) {
+      router.push(`/${role}/dashboard`);
+    }
+  }, [user, role, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium">Checking session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
