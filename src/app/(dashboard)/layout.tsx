@@ -18,7 +18,8 @@ import {
   Users,
   Settings,
   Bell,
-  Menu
+  Star,
+  MessageSquare
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -59,10 +60,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     owner: [
       { label: "Insights", href: "/owner/dashboard", icon: LayoutDashboard },
       { label: "Add PG", href: "/owner/add", icon: PlusCircle },
+      { label: "Reviews", href: "/owner/reviews", icon: Star },
       { label: "Profile", href: "/owner/profile", icon: User },
     ],
     admin: [
       { label: "Approvals", href: "/admin/dashboard", icon: CheckCircle2 },
+      { label: "Review Ops", href: "/admin/reviews", icon: Star },
       { label: "User Ops", href: "/admin/users", icon: Users },
       { label: "Settings", href: "/admin/settings", icon: Settings },
     ],
@@ -116,9 +119,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-sm font-bold truncate leading-none mb-1">{userName || "User"}</p>
               <p className="text-[10px] text-muted-foreground capitalize font-medium">{role}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl">
+            <button onClick={handleLogout} className="text-muted-foreground hover:text-destructive transition-colors">
               <LogOut className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </aside>
@@ -166,7 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t flex justify-around items-center h-20 px-4 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        {currentNav.map((item) => {
+        {currentNav.slice(0, 4).map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

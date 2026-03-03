@@ -4,8 +4,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { MapPin, IndianRupee, Bed, ChevronRight, Clock, ShieldCheck, ShieldAlert, Star } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { MapPin, IndianRupee, Bed, Clock, ShieldCheck, ShieldAlert, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Property {
@@ -18,6 +18,8 @@ interface Property {
   images: string[];
   status: "pending" | "approved" | "rejected";
   roomTypes: string[];
+  avgRating?: number;
+  reviewCount?: number;
 }
 
 export function PropertyCard({ property, role }: { property: Property; role: "tenant" | "owner" | "admin" }) {
@@ -54,8 +56,11 @@ export function PropertyCard({ property, role }: { property: Property; role: "te
         
         <div className="absolute top-4 left-4">
           <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
-            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span className="text-[10px] font-black">4.8</span>
+            <Star className={`h-3 w-3 ${property.avgRating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+            <span className="text-[10px] font-black">{property.avgRating ? property.avgRating.toFixed(1) : "New"}</span>
+            {property.reviewCount ? (
+               <span className="text-[8px] text-muted-foreground font-medium">({property.reviewCount})</span>
+            ) : null}
           </div>
         </div>
 
@@ -103,7 +108,6 @@ export function PropertyCard({ property, role }: { property: Property; role: "te
               {type}
             </Badge>
           ))}
-          {property.roomTypes.length > 2 && <span className="text-[10px] text-muted-foreground font-bold self-center">+{property.roomTypes.length - 2}</span>}
         </div>
       </CardContent>
     </Card>

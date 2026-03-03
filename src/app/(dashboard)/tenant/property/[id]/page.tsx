@@ -3,10 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, query, where, orderBy, addDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { useFirebase, useMemoFirebase, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, 
   IndianRupee, 
@@ -17,18 +19,29 @@ import {
   MessageSquare,
   CheckCircle2,
   Calendar,
-  Share2
+  Share2,
+  Star,
+  Trash2,
+  User
 } from "lucide-react";
 import Image from "next/image";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function PropertyDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user, firestore: db, userName } = useFirebase();
+  const { toast } = useToast();
+  
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
+      if (!db || !id) return;
       try {
         const docRef = doc(db, "properties", id as string);
         const docSnap = await getDoc(docRef);
@@ -44,7 +57,87 @@ export default function PropertyDetailsPage() {
       }
     };
     fetchProperty();
-  }, [id, router]);
+  }, [id, router, db]);
+
+  const reviewsQuery = useMemoFirebase(() => {
+    if (!db || !id) return null;
+    return query(
+      collection(db, "reviews"),
+      where("propertyId", "==", id),
+      orderBy("createdAt", "desc")
+    );
+  }, [db, id]);
+
+  const { data: reviews, isLoading: reviewsLoading } = useCollection(reviewsQuery);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !db || !id) return;
+
+    const hasAlreadyReviewed = reviews?.some(r => r.userId === user.uid);
+    if (hasAlreadyReviewed) {
+      toast({ variant: "destructive", title: "Review Denied", description: "You have already reviewed this property." });
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const reviewData = {
+        propertyId: id,
+        userId: user.uid,
+        userName: userName || "Verified Tenant",
+        rating: reviewRating,
+        comment: reviewComment,
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, "reviews"), reviewData);
+
+      // Denormalize stats on property
+      const currentReviewCount = property.reviewCount || 0;
+      const currentAvgRating = property.avgRating || 0;
+      const newReviewCount = currentReviewCount + 1;
+      const newAvgRating = ((currentAvgRating * currentReviewCount) + reviewRating) / newReviewCount;
+
+      const propertyRef = doc(db, "properties", id as string);
+      updateDocumentNonBlocking(propertyRef, {
+        avgRating: newAvgRating,
+        reviewCount: newReviewCount
+      });
+
+      setProperty(prev => ({ ...prev, avgRating: newAvgRating, reviewCount: newReviewCount }));
+      setReviewComment("");
+      toast({ title: "Review Posted!", description: "Thank you for sharing your experience." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Post Failed", description: error.message });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const deleteReview = async (reviewId: string, rating: number) => {
+    if (!db || !id || !confirm("Delete your review?")) return;
+
+    try {
+      await deleteDoc(doc(db, "reviews", reviewId));
+      
+      const currentReviewCount = property.reviewCount || 1;
+      const currentAvgRating = property.avgRating || 0;
+      const newReviewCount = Math.max(0, currentReviewCount - 1);
+      const newAvgRating = newReviewCount === 0 ? 0 : ((currentAvgRating * currentReviewCount) - rating) / newReviewCount;
+
+      const propertyRef = doc(db, "properties", id as string);
+      updateDocumentNonBlocking(propertyRef, {
+        avgRating: newAvgRating,
+        reviewCount: newReviewCount
+      });
+
+      setProperty(prev => ({ ...prev, avgRating: newAvgRating, reviewCount: newReviewCount }));
+      toast({ title: "Review Removed" });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Delete Failed", description: error.message });
+    }
+  };
 
   if (loading) {
     return (
@@ -56,7 +149,7 @@ export default function PropertyDetailsPage() {
 
   if (!property) return null;
 
-  const whatsappLink = `https://wa.me/${property.contactNumber.replace(/\D/g, "")}?text=Hi, I am interested in your PG listing: ${property.pgName} found on PG Locator.`;
+  const whatsappLink = `https://wa.me/${property.contactNumber?.replace(/\D/g, "")}?text=Hi, I am interested in your PG listing: ${property.pgName} found on PG Locator.`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
@@ -80,11 +173,6 @@ export default function PropertyDetailsPage() {
               <Image src={img} alt="Property" fill className="object-cover" />
             </div>
           ))}
-          {!property.images || property.images.length <= 1 && (
-             <div className="col-span-2 flex items-center justify-center bg-muted/30 rounded-xl text-muted-foreground text-sm italic">
-               No additional photos
-             </div>
-          )}
         </div>
       </div>
 
@@ -94,78 +182,115 @@ export default function PropertyDetailsPage() {
             <div className="flex flex-wrap justify-between items-start gap-4">
               <div className="space-y-1">
                 <h1 className="text-3xl font-bold font-headline">{property.pgName}</h1>
-                <div className="flex items-center text-muted-foreground">
+                <div className="flex items-center text-muted-foreground text-sm">
                   <MapPin className="h-4 w-4 mr-1 text-primary" />
-                  {property.address}, {property.area}, {property.city}
+                  {property.area}, {property.city}
+                </div>
+                <div className="flex items-center gap-1 text-amber-500 font-bold mt-2">
+                  <Star className="h-4 w-4 fill-amber-500" />
+                  {property.avgRating ? property.avgRating.toFixed(1) : "No ratings yet"}
+                  <span className="text-muted-foreground text-xs font-normal ml-1">({property.reviewCount || 0} reviews)</span>
                 </div>
               </div>
               <Badge className="bg-primary/10 text-primary border-primary/20 text-lg px-4 py-1">
-                ₹{property.rent} <span className="text-xs ml-1 font-normal opacity-70">/ month</span>
+                ₹{property.rent} <span className="text-xs ml-1 font-normal opacity-70">/ mo</span>
               </Badge>
-            </div>
-
-            <div className="flex flex-wrap gap-6 pt-4 border-t">
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 p-2 rounded-lg"><Bed className="h-5 w-5 text-primary" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground leading-none">Available</p>
-                  <p className="font-bold">{property.availableBeds} Beds</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 p-2 rounded-lg"><Calendar className="h-5 w-5 text-primary" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground leading-none">Listed on</p>
-                  <p className="font-bold">{new Date(property.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-3xl shadow-sm border space-y-4">
-            <h2 className="text-xl font-bold font-headline">Description</h2>
+            <h2 className="text-xl font-bold font-headline">About this Stay</h2>
             <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
               {property.description}
             </p>
           </div>
 
           <div className="bg-white p-6 rounded-3xl shadow-sm border space-y-4">
-            <h2 className="text-xl font-bold font-headline">Amenities</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {property.amenities?.map((item: string) => (
-                <div key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium">{item}</span>
+            <h2 className="text-xl font-bold font-headline">Reviews</h2>
+            
+            {user && !reviews?.some(r => r.userId === user.uid) && (
+              <form onSubmit={handleReviewSubmit} className="space-y-4 p-4 bg-muted/20 rounded-2xl border border-dashed">
+                <p className="text-sm font-bold">Write a review</p>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star className={`h-6 w-6 ${star <= reviewRating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                    </button>
+                  ))}
                 </div>
-              ))}
+                <Textarea
+                  placeholder="Tell others about your experience..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="rounded-xl"
+                  required
+                />
+                <Button type="submit" className="w-full rounded-xl" disabled={isSubmittingReview}>
+                  {isSubmittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit Review"}
+                </Button>
+              </form>
+            )}
+
+            <div className="space-y-4">
+              {reviewsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" />
+              ) : reviews && reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="p-4 rounded-2xl border bg-muted/5 space-y-2 relative group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-2 rounded-full"><User className="h-4 w-4 text-primary" /></div>
+                        <div>
+                          <p className="text-sm font-bold">{review.userName}</p>
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className={`h-3 w-3 ${s <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-200'}`} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recent'}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground italic">"{review.comment}"</p>
+                    {review.userId === user?.uid && (
+                      <button 
+                        onClick={() => deleteReview(review.id, review.rating)}
+                        className="absolute top-4 right-4 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground text-sm italic py-8">No reviews yet. Be the first to review!</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Contact Sticky Sidebar */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-3xl shadow-xl border border-primary/10 sticky top-24 space-y-6">
-            <h2 className="text-xl font-bold font-headline">Interested?</h2>
+            <h2 className="text-xl font-bold font-headline">Contact Owner</h2>
             <div className="space-y-3">
-              <Button asChild className="w-full h-14 text-lg font-bold rounded-2xl bg-primary hover:bg-primary/90">
+              <Button asChild className="w-full h-14 text-lg font-bold rounded-2xl bg-primary">
                 <a href={`tel:${property.contactNumber}`}>
-                  <Phone className="mr-2 h-5 w-5" /> Call Owner
+                  <Phone className="mr-2 h-5 w-5" /> Call Now
                 </a>
               </Button>
-              <Button asChild className="w-full h-14 text-lg font-bold rounded-2xl bg-[#25D366] hover:bg-[#25D366]/90 border-none">
+              <Button asChild className="w-full h-14 text-lg font-bold rounded-2xl bg-[#25D366] border-none text-white">
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                   <MessageSquare className="mr-2 h-5 w-5" /> WhatsApp
                 </a>
               </Button>
             </div>
-            <div className="pt-4 border-t text-center">
-              <p className="text-xs text-muted-foreground">Always mention you found this on <span className="font-bold text-primary">PG Locator</span></p>
-            </div>
-            <Button variant="outline" className="w-full rounded-xl" onClick={() => {
-              navigator.share?.({ title: property.pgName, url: window.location.href });
-            }}>
-              <Share2 className="mr-2 h-4 w-4" /> Share Listing
-            </Button>
           </div>
         </div>
       </div>

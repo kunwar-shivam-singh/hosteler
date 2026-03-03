@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -96,7 +97,7 @@
         },
         "images": {
           "type": "array",
-          "description": "An array of URLs pointing to images of the property, hosted on Firebase Storage.",
+          "description": "An array of Base64 strings or URLs pointing to images of the property.",
           "items": {
             "type": "string"
           }
@@ -112,6 +113,14 @@
         "status": {
           "type": "string",
           "description": "The current moderation status of the property listing. ('pending', 'approved', 'rejected')"
+        },
+        "avgRating": {
+          "type": "number",
+          "description": "The average numerical rating of the property."
+        },
+        "reviewCount": {
+          "type": "number",
+          "description": "The total number of reviews submitted for this property."
         },
         "createdAt": {
           "type": "string",
@@ -149,15 +158,19 @@
         },
         "propertyId": {
           "type": "string",
-          "description": "Reference to the Property being reviewed. (Relationship: Property 1:N Review)"
+          "description": "Reference to the Property being reviewed."
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who submitted the review. (Relationship: User 1:N Review)"
+          "description": "Reference to the User who submitted the review."
+        },
+        "userName": {
+          "type": "string",
+          "description": "Name of the reviewer for fast display."
         },
         "rating": {
           "type": "number",
-          "description": "The numerical rating given to the property, typically on a scale (e.g., 1-5)."
+          "description": "The numerical rating given to the property (1-5)."
         },
         "comment": {
           "type": "string",
@@ -181,8 +194,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -194,11 +206,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile data, including their assigned role. Authorization relies on the path variable matching `request.auth.uid`. Also used for admin-only management of user accounts.",
+          "description": "Stores user profile data.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier (Firebase Auth UID) of the user."
+              "description": "The unique identifier of the user."
             }
           ]
         }
@@ -210,11 +222,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Dedicated collection for validating admin roles. A document exists here if and only if the corresponding user is an administrator. Authorization relies on existence checks and `adminId` matching `request.auth.uid` for self-management.",
+          "description": "Admin validation collection.",
           "params": [
             {
               "name": "adminId",
-              "description": "The unique identifier (Firebase Auth UID) of an administrator."
+              "description": "The unique identifier of an administrator."
             }
           ]
         }
@@ -226,11 +238,11 @@
           "schema": {
             "$ref": "#/backend/entities/Property"
           },
-          "description": "Stores all PG/Hostel property listings. Includes denormalized `ownerId` for authorization independence and `status` for moderation and public visibility. Supports QAPs for tenants (approved listings), owners (their own listings), and admins (all listings).",
+          "description": "Stores all property listings.",
           "params": [
             {
               "name": "propertyId",
-              "description": "The unique identifier of the property listing."
+              "description": "The unique identifier of the property."
             }
           ]
         }
@@ -242,7 +254,7 @@
           "schema": {
             "$ref": "#/backend/entities/Review"
           },
-          "description": "Stores all property reviews. Includes denormalized `userId` for authorization independence (owner of the review) and `propertyId` for contextual linking to the reviewed property. Supports QAPs for listing reviews by property and for users managing their own reviews.",
+          "description": "Stores all property reviews.",
           "params": [
             {
               "name": "reviewId",
@@ -251,7 +263,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The proposed Firestore structure prioritizes secure, scalable, and debuggable authorization by adhering strictly to the core design principles. \n\n**Authorization Independence (CRITICAL):**\n1.  \n    `User` profiles (`/users/{userId}`): Authorization relies on the path variable `{userId}` matching `request.auth.uid`. This is inherently independent as the UID is part of the request context.\n2.  \n    `Property` listings (`/properties/{propertyId}`): Each `Property` document explicitly includes an `ownerId` field. This denormalizes the ownership information directly into the document. Security rules can check `resource.data.ownerId == request.auth.uid` without needing any `get()` calls to parent or related documents. This ensures atomic operations and prevents broken authorization dependencies.\n3.  \n    `Review` entries (`/reviews/{reviewId}`): Similar to `Property`, each `Review` document contains a `userId` field, identifying the creator of the review. Rules can verify `resource.data.userId == request.auth.uid` for ownership. It also contains `propertyId` for contextual linking.\n4.  \n    `Admin Roles` (`/roles_admin/{adminId}`): A dedicated top-level collection `roles_admin` is used for existence-based admin role checks. An admin user will have a document `adminId` matching their UID. Rules will use `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` for efficient, independent role verification, rather than relying on a `role` field in the `User` document for critical admin checks, which would involve a `get()` call.\n\nThis denormalization strategy eliminates `get()` calls in security rules, making them more performant, easier to write, and robust against race conditions in transactions.\n\n**Queryable Access Patterns (QAPs):**\n1.  \n    `Public Property Search` (`/properties/{propertyId}`): Tenants can search and filter properties. The `properties` collection allows `list` operations with a `where('status', '==', 'approved')` clause. This enables efficient querying of public-facing data while ensuring only approved listings are returned, directly supporting the \"Rules are not Filters\" principle.\n2.  \n    `Owner Property Management` (`/properties/{propertyId}`): Owners can list their own properties using a query like `where('ownerId', '==', request.auth.uid)`. This allows owners to view their pending, approved, or rejected listings. The `ownerId` field in each property document facilitates this QAP.\n3.  \n    `Admin Moderation` (`/properties/{propertyId}` and `/reviews/{reviewId}`): Admins, verified via the `/roles_admin/{adminId}` collection, can `list` all documents in both `properties` and `reviews` collections, enabling comprehensive moderation without restrictions.\n\n**Structural Segregation:**\n*   `users` collection holds private user data, accessible by the user themselves or by administrators.\n*   `roles_admin` is segregated for simple, secure admin role checks.\n*   `properties` and `reviews` are top-level collections, as their primary access patterns (public search, owner's own, admin view, property-specific reviews) do not require strict hierarchical containment under a user for efficiency. The denormalized `ownerId`, `userId`, and `propertyId` fields provide the necessary links for authorization and filtering without sacrificing QAP efficiency.\n\nThis design ensures that security rules are clear, explicit, and easy to debug, directly mapping to the application's roles and features."
+    ]
   }
 }
