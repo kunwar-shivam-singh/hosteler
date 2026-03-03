@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Loader2, Eye, EyeOff } from "lucide-react";
+import { Home, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,6 +46,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 gap-6">
+      <div className="w-full max-w-md flex justify-start">
+        <Button variant="ghost" asChild className="rounded-xl">
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+          </Link>
+        </Button>
+      </div>
       <Card className="w-full max-w-md shadow-xl rounded-2xl border-none">
         <CardHeader className="space-y-1 flex flex-col items-center">
           <div className="bg-primary p-2 rounded-xl mb-4">
@@ -65,6 +72,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -77,6 +85,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pr-10"
+                  suppressHydrationWarning
                 />
                 <button
                   type="button"
