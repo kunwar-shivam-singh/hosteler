@@ -17,6 +17,7 @@ export default function AdminReviewsPage() {
   const { role, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
+  // Defensive query initialization to prevent permission errors
   const reviewsQuery = useMemoFirebase(() => {
     if (!db || role !== "admin") return null;
     return query(collection(db, "reviews"), orderBy("createdAt", "desc"));
@@ -57,6 +58,7 @@ export default function AdminReviewsPage() {
   };
 
   if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+  
   if (role !== "admin") return (
     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
       <AlertTriangle className="h-12 w-12 text-destructive" />

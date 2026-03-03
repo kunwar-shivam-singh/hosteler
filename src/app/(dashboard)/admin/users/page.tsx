@@ -1,24 +1,27 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
+import { useAuth } from "@/context/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Mail, Phone, Calendar, UserCheck } from "lucide-react";
+import { Loader2, User, Mail, Phone, Calendar, UserCheck, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
+  const { role, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (db) {
+    if (db && role === "admin") {
       fetchUsers();
     }
-  }, [db]);
+  }, [db, role]);
 
   const fetchUsers = async () => {
     if (!db) return;
@@ -50,6 +53,16 @@ export default function AdminUsersPage() {
         return <Badge className="bg-blue-100 text-blue-700 border-blue-200">TENANT</Badge>;
     }
   };
+
+  if (authLoading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+  
+  if (role !== "admin") return (
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+      <AlertTriangle className="h-12 w-12 text-destructive" />
+      <h2 className="text-2xl font-bold">Unauthorized Access</h2>
+      <p className="text-muted-foreground">This panel is restricted to platform administrators only.</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -91,7 +104,7 @@ export default function AdminUsersPage() {
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-bold">{user.name}</p>
+                            <p className="font-bold">{user.name || "Unknown"}</p>
                             <p className="text-xs text-muted-foreground font-mono">{user.id}</p>
                           </div>
                         </div>
@@ -100,11 +113,11 @@ export default function AdminUsersPage() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 text-xs">
                             <Mail className="h-3 w-3 text-muted-foreground" />
-                            {user.email}
+                            {user.email || "N/A"}
                           </div>
                           <div className="flex items-center gap-1.5 text-xs">
                             <Phone className="h-3 w-3 text-muted-foreground" />
-                            {user.phone}
+                            {user.phone || "N/A"}
                           </div>
                         </div>
                       </td>
