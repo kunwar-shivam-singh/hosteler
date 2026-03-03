@@ -27,7 +27,8 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
-      // Simple query to avoid composite index issues - filter by status in state if needed
+      // Use a simple query to avoid index errors. Filter by ownerId only.
+      // Status filtering/sorting is done on the client side for robustness.
       const q = query(
         collection(db, "properties"),
         where("ownerId", "==", user.uid)
@@ -35,7 +36,7 @@ export default function OwnerDashboard() {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Client-side sort to ensure consistent display
+      // Client-side sort: newest first
       results.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
@@ -48,7 +49,7 @@ export default function OwnerDashboard() {
       toast({
         variant: "destructive",
         title: "Load Failed",
-        description: "Could not fetch your properties. Check your database permissions."
+        description: "Could not fetch your properties. Please check your internet connection."
       });
     } finally {
       setLoading(false);
