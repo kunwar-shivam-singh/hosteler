@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { PropertyCard } from "@/components/property-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, SlidersHorizontal, MapPin, IndianRupee, Loader2 } from "lucide-react";
+import { Search, MapPin, IndianRupee, Loader2, FilterX } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,16 +27,17 @@ export default function TenantDashboard() {
     if (db) {
       fetchProperties();
     }
-  }, [db, cityFilter, rentFilter]);
+  }, [db, cityFilter]);
 
   const fetchProperties = async () => {
     if (!db) return;
     setLoading(true);
     try {
+      // Avoid composite index error by only filtering by status in Firestore
+      // Sorting and additional filters are handled client-side for the MVP
       let q = query(
         collection(db, "properties"),
-        where("status", "==", "approved"),
-        orderBy("createdAt", "desc")
+        where("status", "==", "approved")
       );
 
       if (cityFilter !== "all") {
@@ -44,26 +45,39 @@ export default function TenantDashboard() {
       }
 
       const querySnapshot = await getDocs(q);
-      let results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (rentFilter !== "any") {
-        const maxRent = parseInt(rentFilter);
-        results = results.filter((p: any) => p.rent <= maxRent);
-      }
+      // Client-side sort by creation date (newest first)
+      results.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
 
       setProperties(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching properties:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProperties = properties.filter(p =>
-    p.pgName.toLowerCase().includes(search.toLowerCase()) ||
-    p.area.toLowerCase().includes(search.toLowerCase()) ||
-    p.city.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProperties = properties.filter(p => {
+    const matchesSearch = 
+      p.pgName.toLowerCase().includes(search.toLowerCase()) ||
+      p.area.toLowerCase().includes(search.toLowerCase()) ||
+      p.city.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesRent = rentFilter === "any" || p.rent <= parseInt(rentFilter);
+    
+    return matchesSearch && matchesRent;
+  });
+
+  const resetFilters = () => {
+    setCityFilter("all");
+    setRentFilter("any");
+    setSearch("");
+  };
 
   return (
     <div className="space-y-6">
@@ -119,6 +133,9 @@ export default function TenantDashboard() {
               </SelectContent>
             </Select>
           </div>
+          <Button variant="outline" className="rounded-xl" onClick={resetFilters}>
+            <FilterX className="h-4 w-4 mr-2" /> Reset
+          </Button>
         </div>
       </div>
 
@@ -140,7 +157,7 @@ export default function TenantDashboard() {
           </div>
           <h3 className="text-xl font-bold">No results found</h3>
           <p className="text-muted-foreground">Try adjusting your search or filters.</p>
-          <Button variant="link" className="text-primary mt-2" onClick={() => { setCityFilter("all"); setRentFilter("any"); setSearch(""); }}>
+          <Button variant="link" className="text-primary mt-2" onClick={resetFilters}>
             Clear all filters
           </Button>
         </div>

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, ArrowLeft, X, Home, Sparkles, AlertCircle } from "lucide-react";
+import { Loader2, Upload, ArrowLeft, X, Home, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { AIListingEnhancer } from "@/components/ai-listing-enhancer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -86,11 +86,10 @@ export default function AddPropertyPage() {
     }
 
     setIsLoading(true);
-    setStatusMessage("Processing images...");
+    setStatusMessage("Processing photos (bypassing Storage issues)...");
 
     try {
-      // Convert images to Base64 strings instead of uploading to Storage
-      // This is a temporary workaround for Storage issues
+      // Use Base64 encoding as a workaround for Firebase Storage initialization hangs
       const base64Images: string[] = [];
       for (const image of images) {
         const base64 = await fileToBase64(image);
@@ -113,7 +112,7 @@ export default function AddPropertyPage() {
         amenities: formData.amenities,
         ownerId: user.uid,
         images: base64Images,
-        status: "pending",
+        status: "pending", // PRD required: pending by default
         createdAt: new Date().toISOString(),
       };
 
@@ -343,7 +342,7 @@ export default function AddPropertyPage() {
                   </label>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground italic mt-2">Note: Photos are encoded directly into the listing for instant publishing.</p>
+              <p className="text-[10px] text-muted-foreground italic mt-2">Note: Photos are saved directly into the listing for instant publishing.</p>
             </div>
 
             <Button type="submit" className="w-full h-14 text-lg font-bold rounded-2xl" disabled={isLoading}>
