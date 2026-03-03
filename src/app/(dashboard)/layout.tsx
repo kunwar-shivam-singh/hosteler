@@ -45,6 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     owner: [
       { label: "My Listings", href: "/owner/dashboard", icon: LayoutDashboard },
       { label: "Add New", href: "/owner/add", icon: PlusCircle },
+      { label: "Profile", href: "/owner/profile", icon: User },
     ],
     admin: [
       { label: "Approvals", href: "/admin/dashboard", icon: CheckCircle2 },
