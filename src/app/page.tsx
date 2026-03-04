@@ -49,13 +49,6 @@ export default function LandingPage() {
     fetchCms();
   }, [db]);
 
-  const popularAreas = [
-    { name: "Mumbai", count: "120+ Listings", img: "https://picsum.photos/seed/mumbai/400/300" },
-    { name: "Bangalore", count: "85+ Listings", img: "https://picsum.photos/seed/bangalore/400/300" },
-    { name: "Delhi", count: "110+ Listings", img: "https://picsum.photos/seed/delhi/400/300" },
-    { name: "Pune", count: "60+ Listings", img: "https://picsum.photos/seed/pune/400/300" },
-  ];
-
   // Default Fallbacks
   const content = {
     heroTitle: cmsData?.heroTitle || "Your Perfect Stay is Just One Tap Away",
@@ -66,6 +59,12 @@ export default function LandingPage() {
       { title: "Verified Stays", desc: "Every listing is manually approved by our team to ensure safety and quality standards." },
       { title: "Community Reviews", desc: "Read honest feedback from fellow residents before you make your decision." },
       { title: "Zero Brokerage", desc: "We connect you directly with owners. No hidden fees, no middle-men commissions." }
+    ],
+    popularAreas: cmsData?.popularAreas || [
+      { name: "Mumbai", count: "120+ Listings", img: "https://picsum.photos/seed/mumbai/400/300" },
+      { name: "Bangalore", count: "85+ Listings", img: "https://picsum.photos/seed/bangalore/400/300" },
+      { name: "Delhi", count: "110+ Listings", img: "https://picsum.photos/seed/delhi/400/300" },
+      { name: "Pune", count: "60+ Listings", img: "https://picsum.photos/seed/pune/400/300" },
     ]
   };
 
@@ -193,11 +192,13 @@ export default function LandingPage() {
                 <h2 className="text-3xl md:text-5xl font-black mb-2">Popular Areas</h2>
                 <p className="text-muted-foreground font-medium">Explore top localities for students and professionals.</p>
               </div>
-              <Button variant="ghost" className="font-bold hidden sm:flex">View all areas <ArrowRight className="ml-2 h-4 w-4" /></Button>
+              <Button variant="ghost" className="font-bold hidden sm:flex" asChild>
+                <Link href="/signup?role=tenant">View all areas <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {popularAreas.map((area) => (
+              {content.popularAreas.map((area: any) => (
                 <Link href="/signup?role=tenant" key={area.name} className="group relative overflow-hidden rounded-[2.5rem] aspect-[4/5] shadow-lg">
                   <Image 
                     src={area.img} 

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, ShieldCheck, Bell, Database, Save, Loader2, Sparkles, Layout } from "lucide-react";
+import { Settings, ShieldCheck, Bell, Database, Save, Loader2, Sparkles, Layout, MapPin } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const db = useFirestore();
@@ -26,6 +26,12 @@ export default function AdminSettingsPage() {
     aboutText: "",
     contactEmail: "support@pglocator.com",
     footerText: "© 2025 PG Locator. All rights reserved.",
+    popularAreas: [
+      { name: "Mumbai", count: "120+ Listings", img: "https://picsum.photos/seed/mumbai/400/300" },
+      { name: "Bangalore", count: "85+ Listings", img: "https://picsum.photos/seed/bangalore/400/300" },
+      { name: "Delhi", count: "110+ Listings", img: "https://picsum.photos/seed/delhi/400/300" },
+      { name: "Pune", count: "60+ Listings", img: "https://picsum.photos/seed/pune/400/300" },
+    ]
   });
 
   useEffect(() => {
@@ -35,7 +41,12 @@ export default function AdminSettingsPage() {
         const docRef = doc(db, "siteContent", "homepage");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setCmsData({ ...cmsData, ...docSnap.data() });
+          const data = docSnap.data();
+          setCmsData({ 
+            ...cmsData, 
+            ...data,
+            popularAreas: data.popularAreas || cmsData.popularAreas 
+          });
         }
       } catch (e) {
         console.error(e);
@@ -60,6 +71,12 @@ export default function AdminSettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateArea = (index: number, field: string, value: string) => {
+    const updatedAreas = [...cmsData.popularAreas];
+    updatedAreas[index] = { ...updatedAreas[index], [field]: value };
+    setCmsData({ ...cmsData, popularAreas: updatedAreas });
   };
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
@@ -133,9 +150,57 @@ export default function AdminSettingsPage() {
                 />
               </div>
             </div>
-            <Button onClick={handleSaveCMS} className="w-full h-12 rounded-xl font-bold" disabled={saving}>
-               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-               Save CMS Changes
+          </CardContent>
+        </Card>
+
+        {/* Popular Areas Editor */}
+        <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+          <CardHeader className="bg-blue-50 border-b p-8">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-3 rounded-2xl">
+                <MapPin className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle>Popular Areas</CardTitle>
+                <CardDescription>Manage the top city localities on landing page.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {cmsData.popularAreas.map((area, idx) => (
+                <div key={idx} className="p-6 rounded-2xl border bg-muted/20 space-y-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-primary">Area Slot {idx + 1}</p>
+                  <div className="space-y-2">
+                    <Label>City Name</Label>
+                    <Input 
+                      value={area.name} 
+                      onChange={(e) => updateArea(idx, "name", e.target.value)}
+                      className="rounded-xl h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Listing Count Label</Label>
+                    <Input 
+                      value={area.count} 
+                      onChange={(e) => updateArea(idx, "count", e.target.value)}
+                      className="rounded-xl h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Image URL (or Picsum Seed)</Label>
+                    <Input 
+                      value={area.img} 
+                      onChange={(e) => updateArea(idx, "img", e.target.value)}
+                      className="rounded-xl h-10"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button onClick={handleSaveCMS} className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20" disabled={saving}>
+               {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+               Save All CMS Changes
             </Button>
           </CardContent>
         </Card>
@@ -166,32 +231,6 @@ export default function AdminSettingsPage() {
                 <p className="text-sm text-muted-foreground">Require owners to verify phone numbers before listing.</p>
               </div>
               <Switch defaultChecked />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
-          <CardHeader className="bg-blue-50 border-b p-8">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-3 rounded-2xl">
-                <Database className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <CardTitle>Platform Limits</CardTitle>
-                <CardDescription>Set global constraints for data.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Maximum Photos per Listing</Label>
-                <Input type="number" defaultValue={10} className="rounded-xl h-12" />
-              </div>
-              <div className="space-y-2">
-                <Label>Minimum Monthly Rent (₹)</Label>
-                <Input type="number" defaultValue={1000} className="rounded-xl h-12" />
-              </div>
             </div>
           </CardContent>
         </Card>
