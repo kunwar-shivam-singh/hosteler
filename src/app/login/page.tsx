@@ -9,8 +9,7 @@ import {
   GoogleAuthProvider, 
   signInWithPopup
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,8 +31,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor the global user state from AuthContext.
-  // This is the most reliable way to handle mobile auth completions.
+  // Monitor user state. If auth succeeds in background (redirect or popup), 
+  // this will trigger and move the user to the next step.
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
@@ -50,8 +49,7 @@ export default function LoginPage() {
     setAuthError(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // Logic handled by useEffect above
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       setAuthError(error.message);
       toast({ variant: "destructive", title: "Login Failed", description: error.message });
@@ -66,16 +64,26 @@ export default function LoginPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // Direct popup trigger is standard for all devices now
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Google login error:", error);
+      
+      // If user is actually signed in (detected via SDK), ignore the "closed" error
+      if (auth.currentUser) return;
+
       if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError("The sign-in window was closed. If you are on mobile, please ensure popups are enabled and try again.");
+        // Mobile browsers often close popups aggressively. 
+        // We wait a moment to see if the session was caught anyway.
+        setTimeout(() => {
+          if (!auth.currentUser) {
+            setAuthError("The sign-in window was closed. If you are on mobile, please ensure popups are enabled and try again.");
+            setIsGoogleLoading(false);
+          }
+        }, 2500);
       } else {
         setAuthError(error.message || "An error occurred during Google sign-in.");
+        setIsGoogleLoading(false);
       }
-      setIsGoogleLoading(false);
     }
   };
 

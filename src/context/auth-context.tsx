@@ -2,7 +2,13 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User, getRedirectResult } from "firebase/auth";
+import { 
+  onAuthStateChanged, 
+  User, 
+  getRedirectResult, 
+  setPersistence, 
+  browserLocalPersistence 
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebase } from "@/firebase";
 
@@ -33,6 +39,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Ensure persistence is set to local for mobile stability
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn("AuthContext: Persistence setup failed", err);
+    });
+
     // Handle redirect results globally. 
     // This is critical for mobile browsers that might reload the app after auth.
     getRedirectResult(auth)
@@ -42,9 +53,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       })
       .catch((error) => {
-        // We log but don't block, as onAuthStateChanged will still fire if the user is logged in
-        if (error.code !== 'auth/no-auth-event') {
-          console.warn("AuthContext: Redirect error handled:", error.message);
+        // Silence "missing initial state" errors as they are often false positives 
+        // in storage-partitioned environments (Safari)
+        if (error.code !== 'auth/no-auth-event' && error.code !== 'auth/argument-error') {
+          console.warn("AuthContext: Redirect result issue handled:", error.message);
         }
       });
 

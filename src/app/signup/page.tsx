@@ -24,7 +24,7 @@ export default function SignupPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor user state globally. If auth succeeds in background (redirect or popup), 
+  // Monitor user state globally. If auth succeeds in background, 
   // this will trigger and move the user to the next step.
   useEffect(() => {
     if (!authLoading && user) {
@@ -43,16 +43,26 @@ export default function SignupPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // Using Popup as standard. Mobile issues are usually due to blocked windows.
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Google signup error:", error);
+      
+      // If user is actually signed in (detected via SDK), ignore the "closed" error
+      if (auth.currentUser) return;
+
       if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError("The sign-up window was closed. Please try again and ensure popups are allowed in your browser.");
+        // Mobile browsers often close popups aggressively. 
+        // We wait a moment to see if the session was caught anyway.
+        setTimeout(() => {
+          if (!auth.currentUser) {
+            setAuthError("The sign-up window was closed. Please try again and ensure popups are allowed in your browser.");
+            setIsGoogleLoading(false);
+          }
+        }, 2500);
       } else {
         setAuthError(error.message || "An error occurred during Google sign-up.");
+        setIsGoogleLoading(false);
       }
-      setIsGoogleLoading(false);
     }
   };
 
