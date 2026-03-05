@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -66,7 +67,7 @@ export default function OwnerProfilePage() {
         name: userData.name,
         phone: userData.phone,
       });
-      toast({ title: "Profile Updated", description: "Owner contact information updated." });
+      toast({ title: "Profile Updated", description: "Your owner details have been saved." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Update Failed", description: error.message });
     } finally {
@@ -120,7 +121,7 @@ export default function OwnerProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-10">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold font-headline">Owner Profile</h1>
+        <h1 className="text-3xl font-bold font-headline">My Profile</h1>
         <p className="text-muted-foreground">Manage your information and account security.</p>
       </div>
 
@@ -128,28 +129,29 @@ export default function OwnerProfilePage() {
         <CardHeader className="bg-primary/5 border-b p-8">
           <div className="flex items-center gap-4">
             <div className="bg-primary p-3 rounded-2xl">
-              <ShieldCheck className="h-6 w-6 text-white" />
+              <User className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold">Owner Details</CardTitle>
-              <CardDescription>This information is shown on your property listings.</CardDescription>
+              <CardTitle className="text-2xl font-bold">Owner Settings</CardTitle>
+              <CardDescription>Update how tenants can reach you.</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-8">
           <form onSubmit={handleUpdate} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
+              <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
                 value={userData.name}
                 onChange={(e) => setUserData({ ...userData, name: e.target.value })}
                 className="rounded-xl h-12"
                 required
+                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Account Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -157,11 +159,13 @@ export default function OwnerProfilePage() {
                   value={userData.email}
                   disabled
                   className="rounded-xl h-12 pl-10 bg-muted/50"
+                  suppressHydrationWarning
                 />
               </div>
+              <p className="text-[10px] text-muted-foreground italic">Email is tied to your account and cannot be changed.</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Public Contact Phone</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -170,20 +174,20 @@ export default function OwnerProfilePage() {
                   onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
                   className="rounded-xl h-12 pl-10"
                   required
+                  suppressHydrationWarning
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground italic">Important: This phone number is how tenants will contact you.</p>
             </div>
             <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-bold" disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Updating...
+                  Saving Changes...
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-5 w-5" />
-                  Update Profile
+                  Save Changes
                 </>
               )}
             </Button>
@@ -216,6 +220,7 @@ export default function OwnerProfilePage() {
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   className="rounded-xl h-12 pr-10"
                   required
+                  suppressHydrationWarning
                 />
                 <button
                   type="button"
@@ -237,6 +242,7 @@ export default function OwnerProfilePage() {
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                   className="rounded-xl h-12 pr-10"
                   required
+                  suppressHydrationWarning
                 />
                 <button
                   type="button"

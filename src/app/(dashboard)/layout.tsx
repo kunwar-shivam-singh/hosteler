@@ -107,6 +107,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const currentNav = role ? navItems[role as keyof typeof navItems] : [];
+  // Filter for mobile bottom nav to keep it clean (remove actions like "Add PG")
+  const bottomNavItems = currentNav.filter((item: any) => item.label !== "Add PG");
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
@@ -221,7 +223,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <span className="text-[10px] font-bold uppercase tracking-tight">Home</span>
         </Link>
-        {currentNav.slice(0, 3).map((item: any) => {
+        {bottomNavItems.slice(0, 3).map((item: any) => {
           const isActive = pathname === item.href;
           return (
             <Link
