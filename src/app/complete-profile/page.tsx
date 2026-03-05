@@ -134,7 +134,6 @@ export default function CompleteProfilePage() {
                     className="pl-12 h-14 rounded-2xl bg-muted/30 border-none focus:bg-white transition-all font-medium"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    suppressHydrationWarning
                   />
                 </div>
               </div>
@@ -150,7 +149,6 @@ export default function CompleteProfilePage() {
                     className="pl-12 h-14 rounded-2xl bg-muted/30 border-none focus:bg-white transition-all font-medium"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    suppressHydrationWarning
                   />
                 </div>
               </div>

@@ -20,7 +20,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { auth } = useFirebase();
   const { user, role, isProfileComplete, loading: authLoading } = useAuth();
   
@@ -28,7 +27,7 @@ export default function SignupPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Handle potential redirect result
+    // Handle potential redirect result (common on mobile browsers)
     getRedirectResult(auth).catch((error) => {
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
@@ -73,7 +72,7 @@ export default function SignupPage() {
 
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
-        setAuthError(`Unauthorized Domain: Add '${domain}' to your Firebase project.`);
+        setAuthError(`Domain Not Authorized: Add '${domain}' to Firebase Console > Auth > Settings.`);
         setIsGoogleLoading(false);
       } else if (error.code === 'auth/popup-closed-by-user') {
         setTimeout(() => {
@@ -81,7 +80,7 @@ export default function SignupPage() {
             setAuthError("Sign-up window was closed. Try again or ensure popups are enabled.");
             setIsGoogleLoading(false);
           }
-        }, 2000);
+        }, 2500);
       } else {
         setAuthError(error.message || "An error occurred.");
         setIsGoogleLoading(false);
@@ -115,8 +114,8 @@ export default function SignupPage() {
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">Sign Up</CardTitle>
-          <CardDescription className="text-center px-6">Create your account to find or list your perfect stay.</CardDescription>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight">Create Account</CardTitle>
+          <CardDescription className="text-center px-6">Join the best mobile-first PG marketplace</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (
@@ -143,11 +142,11 @@ export default function SignupPage() {
                 <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
             )}
-            Sign Up with Google
+            Continue with Google
           </Button>
 
-          <p className="text-center text-xs text-muted-foreground font-medium px-4">
-            By continuing, you agree to our Terms and Privacy Policy. You'll complete your profile in the next step.
+          <p className="text-center text-xs text-muted-foreground font-medium px-4 leading-relaxed">
+            Fast one-tap signup. You will provide your contact details and agree to our terms in the next step.
           </p>
         </CardContent>
         <CardFooter className="flex flex-col pb-10">
