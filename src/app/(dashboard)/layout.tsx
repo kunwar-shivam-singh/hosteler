@@ -3,8 +3,10 @@
 
 import { useAuth } from "@/context/auth-context";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { 
   Home, 
@@ -19,16 +21,38 @@ import {
   Settings,
   Bell,
   Star,
-  Globe
+  Globe,
+  Lock
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, loading, userName, isProfileComplete } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user) {
+      // Listen for user status changes (to handle real-time blocking)
+      const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists() && doc.data().status === 'blocked') {
+          setIsBlocked(true);
+          toast({
+            variant: "destructive",
+            title: "Access Restricted",
+            description: "Your account has been blocked by an administrator."
+          });
+          signOut(auth).then(() => router.push("/"));
+        }
+      });
+      return () => unsub();
+    }
+  }, [user, loading, router, toast]);
 
   useEffect(() => {
     if (!loading) {
@@ -37,13 +61,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       } else if (!isProfileComplete) {
         router.push("/complete-profile");
       } else if (role) {
-        // Enforce role-based routing to prevent cross-role access and permission errors
         const segments = pathname.split('/');
-        const roleInPath = segments[1]; // 'admin', 'tenant', 'owner'
-        
-        // Only validate if we are in a role-prefixed route
+        const roleInPath = segments[1];
         if (['admin', 'tenant', 'owner'].includes(roleInPath) && roleInPath !== role) {
-          console.warn(`Redirecting unauthorized access: ${role} tried to access ${roleInPath}`);
           router.push(`/${role}/dashboard`);
         }
       }
@@ -59,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user || !isProfileComplete) return null;
+  if (!user || !isProfileComplete || isBlocked) return null;
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -90,7 +110,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-72 flex-col fixed inset-y-0 z-50 bg-white border-r">
         <div className="p-8">
           <Link className="flex items-center space-x-3" href="/">
@@ -148,9 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* Main Container */}
       <div className="flex-1 lg:ml-72 flex flex-col">
-        {/* Desktop Header */}
         <header className="hidden lg:flex h-20 items-center justify-between px-8 bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b">
           <h2 className="text-xl font-bold font-headline capitalize">
             {pathname.split('/').pop()?.replace('-', ' ') || "Dashboard"}
@@ -175,7 +192,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Mobile Header */}
         <header className="lg:hidden flex h-16 items-center justify-between px-6 bg-white border-b sticky top-0 z-40">
           <Link className="flex items-center space-x-2" href="/">
             <div className="bg-primary p-1.5 rounded-lg">
@@ -188,13 +204,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Button>
         </header>
 
-        {/* Content */}
         <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">
           {children}
         </main>
       </div>
 
-      {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t flex justify-around items-center h-20 px-4 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
         <Link
           href="/"

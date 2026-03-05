@@ -30,7 +30,12 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user within the application, determining access and permissions. (Enum: 'tenant', 'owner', 'admin')"
+          "description": "The role of the user within the application. (Enum: 'tenant', 'owner', 'admin')"
+        },
+        "status": {
+          "type": "string",
+          "description": "The account status. (Enum: 'active', 'blocked')",
+          "default": "active"
         },
         "createdAt": {
           "type": "string",
@@ -59,7 +64,7 @@
         },
         "ownerId": {
           "type": "string",
-          "description": "Reference to the User who owns this property listing. (Relationship: User 1:N Property)"
+          "description": "Reference to the User who owns this property listing."
         },
         "pgName": {
           "type": "string",
@@ -87,14 +92,14 @@
         },
         "amenities": {
           "type": "array",
-          "description": "A list of amenities available at the property (e.g., 'Wi-Fi', 'AC', 'Food').",
+          "description": "A list of amenities available at the property.",
           "items": {
             "type": "string"
           }
         },
         "roomTypes": {
           "type": "array",
-          "description": "A list of room types offered within the property (e.g., 'Single Occupancy', 'Double Sharing', 'Triple Sharing').",
+          "description": "A list of room types offered within the property.",
           "items": {
             "type": "string"
           }
