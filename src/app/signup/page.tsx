@@ -16,21 +16,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Loader2, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, role, isProfileComplete, loading: authLoading } = useAuth();
+  
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // Handle redirect result for mobile users
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isProfileComplete && role) {
+        router.push(`/${role}/dashboard`);
+      } else {
+        router.push("/complete-profile");
+      }
+    }
+  }, [user, role, isProfileComplete, authLoading, router]);
+
+  // Handle redirect result for mobile users returning from Google
   useEffect(() => {
     const handleRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
         if (result) {
           setIsGoogleLoading(true);
-          const user = result.user;
-          const userDoc = await getDoc(doc(db, "users", user.uid));
+          const firebaseUser = result.user;
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             router.push(`/${userData.role}/dashboard`);
@@ -42,7 +57,7 @@ export default function SignupPage() {
       } catch (error: any) {
         console.error("Auth redirect error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
-          toast({ variant: "destructive", title: "Signup Failed", description: error.message });
+          toast({ variant: "destructive", title: "Signup Failed", description: "Authentication failed. Please try again." });
         }
       } finally {
         setIsGoogleLoading(false);
@@ -55,18 +70,17 @@ export default function SignupPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     
-    // Check if device is mobile to decide between Popup and Redirect
+    // Use Redirection for mobile browsers to avoid popup issues
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     try {
       if (isMobile) {
         await signInWithRedirect(auth, provider);
-        // Page will redirect
       } else {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
+        const firebaseUser = result.user;
 
-        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
           router.push(`/${userData.role}/dashboard`);
@@ -77,8 +91,8 @@ export default function SignupPage() {
       }
     } catch (error: any) {
       console.error("Google signup error:", error);
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        // Fallback to redirect if popup fails
+      // Fallback to redirect if popup is blocked or closed
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-blocked') {
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectError: any) {
@@ -91,6 +105,14 @@ export default function SignupPage() {
       }
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 gap-6">
