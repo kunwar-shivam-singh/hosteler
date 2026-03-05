@@ -8,7 +8,6 @@ import {
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
   signInWithPopup, 
-  signInWithRedirect, 
   getRedirectResult 
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -18,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Home, Loader2, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,8 +31,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Auto-redirect if already logged in
+  // Auto-redirect if already logged in and context updates
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
@@ -43,39 +44,10 @@ export default function LoginPage() {
     }
   }, [user, role, isProfileComplete, authLoading, router]);
 
-  // Handle redirect result for mobile users returning from Google
-  useEffect(() => {
-    const handleRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          setIsGoogleLoading(true);
-          const firebaseUser = result.user;
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            router.push(`/${userData.role}/dashboard`);
-            toast({ title: "Logged in successfully", description: `Welcome back, ${userData.name}` });
-          } else {
-            router.push("/complete-profile");
-          }
-        }
-      } catch (error: any) {
-        console.error("Auth redirect error:", error);
-        if (error.code !== 'auth/popup-closed-by-user') {
-          toast({ variant: "destructive", title: "Login Failed", description: "Authentication failed. Please try again." });
-        }
-      } finally {
-        setIsGoogleLoading(false);
-      }
-    };
-    handleRedirect();
-  }, [router, toast]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAuthError(null);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -85,11 +57,11 @@ export default function LoginPage() {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         router.push(`/${userData.role}/dashboard`);
-        toast({ title: "Logged in successfully", description: `Welcome back, ${userData.name}` });
       } else {
         router.push("/complete-profile");
       }
     } catch (error: any) {
+      setAuthError(error.message);
       toast({ variant: "destructive", title: "Login Failed", description: error.message });
     } finally {
       setIsLoading(false);
@@ -98,41 +70,33 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setAuthError(null);
     const provider = new GoogleAuthProvider();
     
-    // Use Redirection for mobile browsers to avoid popup issues
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
     try {
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        const firebaseUser = result.user;
+      // Use Popup as primary for better state stability on mobile
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
 
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          router.push(`/${userData.role}/dashboard`);
-          toast({ title: "Logged in with Google", description: `Welcome back, ${userData.name}` });
-        } else {
-          router.push("/complete-profile");
-        }
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        router.push(`/${userData.role}/dashboard`);
+        toast({ title: "Logged in", description: `Welcome back, ${userData.name}` });
+      } else {
+        router.push("/complete-profile");
       }
     } catch (error: any) {
       console.error("Google login error:", error);
-      // If popup fails or is blocked, fallback to redirect
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-blocked') {
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirectError: any) {
-          toast({ variant: "destructive", title: "Google Login Failed", description: redirectError.message });
-          setIsGoogleLoading(false);
-        }
+      if (error.code === 'auth/popup-blocked') {
+        setAuthError("Sign-in popup was blocked. Please enable popups for this site and try again.");
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // User closed the popup, no need for error message
       } else {
-        toast({ variant: "destructive", title: "Google Login Failed", description: error.message });
-        setIsGoogleLoading(false);
+        setAuthError(error.message || "An error occurred during Google sign-in.");
       }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -153,15 +117,24 @@ export default function LoginPage() {
           </Link>
         </Button>
       </div>
+
       <Card className="w-full max-w-md shadow-xl rounded-2xl border-none">
         <CardHeader className="space-y-1 flex flex-col items-center">
           <div className="bg-primary p-2 rounded-xl mb-4">
             <Home className="h-6 w-6 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">Welcome back</CardTitle>
-          <CardDescription>Enter your email to sign in to your account</CardDescription>
+          <CardDescription>Sign in to your PG Locator account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {authError && (
+            <Alert variant="destructive" className="rounded-xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Sign-in Issue</AlertTitle>
+              <AlertDescription className="text-xs">{authError}</AlertDescription>
+            </Alert>
+          )}
+
           <Button 
             variant="outline" 
             className="w-full rounded-xl h-12 font-bold flex items-center justify-center gap-2" 
@@ -212,7 +185,6 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -225,7 +197,6 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pr-10"
-                  suppressHydrationWarning
                 />
                 <button
                   type="button"

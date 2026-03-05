@@ -6,17 +6,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithRedirect, 
-  getRedirectResult 
+  signInWithPopup 
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Loader2, ArrowLeft } from "lucide-react";
+import { Home, Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,8 +23,9 @@ export default function SignupPage() {
   const { user, role, isProfileComplete, loading: authLoading } = useAuth();
   
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Auto-redirect if already logged in
+  // Auto-redirect if already logged in and context updates
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
@@ -36,73 +36,35 @@ export default function SignupPage() {
     }
   }, [user, role, isProfileComplete, authLoading, router]);
 
-  // Handle redirect result for mobile users returning from Google
-  useEffect(() => {
-    const handleRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          setIsGoogleLoading(true);
-          const firebaseUser = result.user;
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            router.push(`/${userData.role}/dashboard`);
-            toast({ title: "Welcome back", description: `Logged in as ${userData.name}` });
-          } else {
-            router.push("/complete-profile");
-          }
-        }
-      } catch (error: any) {
-        console.error("Auth redirect error:", error);
-        if (error.code !== 'auth/popup-closed-by-user') {
-          toast({ variant: "destructive", title: "Signup Failed", description: "Authentication failed. Please try again." });
-        }
-      } finally {
-        setIsGoogleLoading(false);
-      }
-    };
-    handleRedirect();
-  }, [router, toast]);
-
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
+    setAuthError(null);
     const provider = new GoogleAuthProvider();
     
-    // Use Redirection for mobile browsers to avoid popup issues
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
     try {
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        const firebaseUser = result.user;
+      // Use Popup as primary for better state stability on mobile
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
 
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          router.push(`/${userData.role}/dashboard`);
-          toast({ title: "Welcome back", description: `Logged in as ${userData.name}` });
-        } else {
-          router.push("/complete-profile");
-        }
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        router.push(`/${userData.role}/dashboard`);
+        toast({ title: "Welcome back", description: `Logged in as ${userData.name}` });
+      } else {
+        router.push("/complete-profile");
       }
     } catch (error: any) {
       console.error("Google signup error:", error);
-      // Fallback to redirect if popup is blocked or closed
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-blocked') {
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirectError: any) {
-          toast({ variant: "destructive", title: "Signup Failed", description: redirectError.message });
-          setIsGoogleLoading(false);
-        }
+      if (error.code === 'auth/popup-blocked') {
+        setAuthError("Sign-up popup was blocked. Please enable popups for this site and try again.");
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // User closed the popup, no need for error message
       } else {
-        toast({ variant: "destructive", title: "Signup Failed", description: error.message });
-        setIsGoogleLoading(false);
+        setAuthError(error.message || "An error occurred during Google sign-up.");
       }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -123,6 +85,7 @@ export default function SignupPage() {
           </Link>
         </Button>
       </div>
+
       <Card className="w-full max-w-md shadow-xl rounded-[2.5rem] border-none overflow-hidden">
         <CardHeader className="space-y-1 flex flex-col items-center pt-10 pb-6 bg-primary/5">
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
@@ -132,6 +95,14 @@ export default function SignupPage() {
           <CardDescription className="text-center px-6">The fastest way to find or list your perfect stay.</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
+          {authError && (
+            <Alert variant="destructive" className="rounded-xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Sign-up Issue</AlertTitle>
+              <AlertDescription className="text-xs">{authError}</AlertDescription>
+            </Alert>
+          )}
+
           <Button 
             variant="outline" 
             className="w-full rounded-2xl h-16 font-bold flex items-center justify-center gap-3 text-lg border-2 hover:bg-muted/50 transition-all" 
