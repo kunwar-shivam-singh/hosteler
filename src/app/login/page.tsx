@@ -1,14 +1,11 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
-  signInWithEmailAndPassword, 
   GoogleAuthProvider, 
   signInWithPopup,
-  signInWithRedirect
 } from "firebase/auth";
 import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -19,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Home, Loader2, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +31,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor user state globally. If auth succeeds in background (redirect or popup), 
+  // Monitor user state globally. If auth succeeds in background, 
   // this will trigger and move the user to the next step instantly.
   useEffect(() => {
     if (!authLoading && user) {
@@ -51,7 +49,7 @@ export default function LoginPage() {
     setAuthError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      initiateEmailSignIn(auth, email, password);
     } catch (error: any) {
       setAuthError(error.message);
       toast({ variant: "destructive", title: "Login Failed", description: error.message });
@@ -75,7 +73,8 @@ export default function LoginPage() {
       if (auth.currentUser) return;
 
       if (error.code === 'auth/unauthorized-domain') {
-        setAuthError("This domain is not authorized in Firebase Console. Please add '" + window.location.hostname + "' to Authorized Domains in Firebase Auth settings.");
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        setAuthError(`Unauthorized Domain: Please add '${domain}' to Authorized Domains in your Firebase Auth settings.`);
         setIsGoogleLoading(false);
       } else if (error.code === 'auth/popup-closed-by-user') {
         // Wait 2s to see if background sync caught it anyway

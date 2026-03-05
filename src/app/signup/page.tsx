@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +6,6 @@ import Link from "next/link";
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
-  signInWithRedirect
 } from "firebase/auth";
 import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -52,7 +50,8 @@ export default function SignupPage() {
       if (auth.currentUser) return;
 
       if (error.code === 'auth/unauthorized-domain') {
-        setAuthError("This domain is not authorized. Please whitelist '" + window.location.hostname + "' in your Firebase Console.");
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        setAuthError(`Unauthorized Domain: Please whitelist '${domain}' in your Firebase Console.`);
         setIsGoogleLoading(false);
       } else if (error.code === 'auth/popup-closed-by-user') {
         setTimeout(() => {
