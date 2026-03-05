@@ -10,7 +10,7 @@ import {
   signInWithPopup,
   signInWithRedirect
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { auth } = useFirebase();
   const { user, role, isProfileComplete, loading: authLoading } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -66,29 +67,24 @@ export default function LoginPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // First attempt: Popup (Smoothest for Desktop)
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google login attempt error:", error);
+      console.error("Google login error:", error);
       
-      // If user is actually signed in (detected via SDK background check), ignore the error
+      // If user is actually signed in (detected via background SDK check), ignore the error
       if (auth.currentUser) return;
 
-      if (error.code === 'auth/popup-closed-by-user') {
-        // Mobile browsers often close popups aggressively. 
-        // We wait a moment to see if the session was caught anyway by the AuthContext.
+      if (error.code === 'auth/unauthorized-domain') {
+        setAuthError("This domain is not authorized in Firebase Console. Please add '" + window.location.hostname + "' to Authorized Domains in Firebase Auth settings.");
+        setIsGoogleLoading(false);
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Wait 2s to see if background sync caught it anyway
         setTimeout(() => {
           if (!auth.currentUser) {
-            setAuthError("The sign-in window was closed. Attempting redirect method...");
-            // Fallback: Redirect (Most stable for Mobile)
-            signInWithRedirect(auth, provider).catch(err => {
-               setAuthError("Auth failed: " + err.message);
-               setIsGoogleLoading(false);
-            });
+            setAuthError("Sign-in window was closed. Try again or check if popups are blocked.");
+            setIsGoogleLoading(false);
           }
         }, 2000);
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Do nothing, another popup is being opened
       } else {
         setAuthError(error.message || "An error occurred during Google sign-in.");
         setIsGoogleLoading(false);
@@ -101,7 +97,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground font-headline">Syncing your session...</p>
+          <p className="text-sm font-medium text-muted-foreground font-headline">Checking session...</p>
         </div>
       </div>
     );
@@ -129,7 +125,7 @@ export default function LoginPage() {
           {authError && (
             <Alert variant="destructive" className="rounded-xl border-none bg-red-50 text-red-800">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertTitle className="font-bold">Sign-in Notice</AlertTitle>
+              <AlertTitle className="font-bold">Notice</AlertTitle>
               <AlertDescription className="text-xs">{authError}</AlertDescription>
             </Alert>
           )}
@@ -173,7 +169,6 @@ export default function LoginPage() {
                 className="h-12 rounded-xl bg-muted/30 border-none focus:bg-white transition-all"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -186,7 +181,6 @@ export default function LoginPage() {
                   className="h-12 rounded-xl bg-muted/30 border-none focus:bg-white transition-all pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  suppressHydrationWarning
                 />
                 <button
                   type="button"

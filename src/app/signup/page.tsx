@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   signInWithRedirect
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -20,13 +20,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { auth } = useFirebase();
   const { user, role, isProfileComplete, loading: authLoading } = useAuth();
   
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor user state globally. If auth succeeds in background, 
-  // this will trigger and move the user to the next step instantly.
+  // Monitor user state globally
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
@@ -45,28 +45,22 @@ export default function SignupPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // First attempt: Popup (Standard Desktop)
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google signup attempt error:", error);
+      console.error("Google signup error:", error);
       
-      // If user is actually signed in (detected via background SDK check), ignore the error
       if (auth.currentUser) return;
 
-      if (error.code === 'auth/popup-closed-by-user') {
-        // Mobile browsers quirk: Wait to see if background session succeeded anyway
+      if (error.code === 'auth/unauthorized-domain') {
+        setAuthError("This domain is not authorized. Please whitelist '" + window.location.hostname + "' in your Firebase Console.");
+        setIsGoogleLoading(false);
+      } else if (error.code === 'auth/popup-closed-by-user') {
         setTimeout(() => {
           if (!auth.currentUser) {
-            setAuthError("The signup window was closed. Attempting redirect method...");
-            // Fallback: Redirect (Stable for Mobile Safari/Chrome)
-            signInWithRedirect(auth, provider).catch(err => {
-               setAuthError("Signup failed: " + err.message);
-               setIsGoogleLoading(false);
-            });
+            setAuthError("The signup window was closed. Please try again.");
+            setIsGoogleLoading(false);
           }
         }, 2000);
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Do nothing
       } else {
         setAuthError(error.message || "An error occurred during Google sign-up.");
         setIsGoogleLoading(false);
@@ -79,7 +73,7 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground font-headline">Initializing session...</p>
+          <p className="text-sm font-medium text-muted-foreground font-headline">Starting session...</p>
         </div>
       </div>
     );

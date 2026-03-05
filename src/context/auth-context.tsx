@@ -39,27 +39,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Force Local Persistence for maximum mobile stability
-    setPersistence(auth, browserLocalPersistence).catch((err) => {
-      console.warn("AuthContext: Persistence setup failed", err);
-    });
+    if (!auth || !db) return;
 
-    // 2. Handle Redirect Results (Critical for mobile Safari/Chrome)
-    // We wrap this in a silent catch because "missing initial state" 
-    // is common in storage-partitioned environments and can be ignored 
-    // as onAuthStateChanged will pick up the user anyway.
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          console.log("AuthContext: Captured redirect result for", result.user.email);
-        }
-      })
-      .catch((error) => {
-        const ignoredErrors = ['auth/no-auth-event', 'auth/argument-error', 'auth/internal-error'];
-        if (!ignoredErrors.some(code => error.code?.includes(code))) {
-          console.log("AuthContext: Redirect result handled (silent):", error.message);
-        }
-      });
+    // 1. Force Local Persistence
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
+
+    // 2. Silently handle redirect results for mobile stability
+    getRedirectResult(auth).catch(() => {
+      // Ignore "missing initial state" errors common in redirects
+    });
 
     // 3. Monitor Authentication State
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -78,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setIsProfileComplete(false);
           }
         } catch (error) {
-          console.error("AuthContext: Error fetching user role:", error);
+          console.error("AuthContext: Error fetching user profile:", error);
           setIsProfileComplete(false);
         }
       } else {
