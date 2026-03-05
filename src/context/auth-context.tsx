@@ -33,10 +33,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle redirect results globally to ensure state is captured on mobile
-    getRedirectResult(auth).catch((error) => {
-      console.warn("AuthContext: Redirect result error handled:", error.message);
-    });
+    // Handle redirect results globally. 
+    // This is critical for mobile browsers that might reload the app after auth.
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log("AuthContext: Captured redirect result for", result.user.email);
+        }
+      })
+      .catch((error) => {
+        // We log but don't block, as onAuthStateChanged will still fire if the user is logged in
+        if (error.code !== 'auth/no-auth-event') {
+          console.warn("AuthContext: Redirect error handled:", error.message);
+        }
+      });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -49,7 +59,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUserName(userData.name || null);
             setIsProfileComplete(true);
           } else {
-            // Document doesn't exist - likely Google sign in for first time
             setRole(null);
             setUserName(firebaseUser.displayName || null);
             setIsProfileComplete(false);

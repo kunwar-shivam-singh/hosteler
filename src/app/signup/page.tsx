@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   GoogleAuthProvider, 
-  signInWithPopup,
-  getRedirectResult
+  signInWithPopup
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -25,13 +24,14 @@ export default function SignupPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Auto-redirect if already logged in or auth completes in background
+  // Monitor user state globally. If auth succeeds in background (redirect or popup), 
+  // this will trigger and move the user to the next step.
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
-        router.push(`/${role}/dashboard`);
+        router.replace(`/${role}/dashboard`);
       } else {
-        router.push("/complete-profile");
+        router.replace("/complete-profile");
       }
     }
   }, [user, role, isProfileComplete, authLoading, router]);
@@ -43,19 +43,12 @@ export default function SignupPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // Prioritize Popup. Mobile results will be captured by AuthContext/useEffect.
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        toast({ title: "Welcome!", description: "Redirecting to your profile setup..." });
-      }
+      // Using Popup as standard. Mobile issues are usually due to blocked windows.
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Google signup error:", error);
       if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError("The sign-up window was closed. Please try again and keep the window open.");
-      } else if (error.code === 'auth/popup-blocked') {
-        setAuthError("Popup blocked. Please allow popups for this site in your browser settings.");
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Ignored
+        setAuthError("The sign-up window was closed. Please try again and ensure popups are allowed in your browser.");
       } else {
         setAuthError(error.message || "An error occurred during Google sign-up.");
       }
@@ -63,10 +56,13 @@ export default function SignupPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (user && !authError)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-medium text-muted-foreground">Setting up your session...</p>
+        </div>
       </div>
     );
   }

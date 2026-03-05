@@ -7,8 +7,7 @@ import Link from "next/link";
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  getRedirectResult 
+  signInWithPopup
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -33,13 +32,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Auto-redirect if context updates (detects background auth)
+  // Monitor the global user state from AuthContext.
+  // This is the most reliable way to handle mobile auth completions.
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
-        router.push(`/${role}/dashboard`);
+        router.replace(`/${role}/dashboard`);
       } else {
-        router.push("/complete-profile");
+        router.replace("/complete-profile");
       }
     }
   }, [user, role, isProfileComplete, authLoading, router]);
@@ -51,19 +51,10 @@ export default function LoginPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        router.push(`/${userData.role}/dashboard`);
-      } else {
-        router.push("/complete-profile");
-      }
+      // Logic handled by useEffect above
     } catch (error: any) {
       setAuthError(error.message);
       toast({ variant: "destructive", title: "Login Failed", description: error.message });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -75,19 +66,12 @@ export default function LoginPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      // Use Popup as primary. Mobile failures are often transient tab issues.
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        toast({ title: "Authenticating...", description: "Please wait a moment." });
-      }
+      // Direct popup trigger is standard for all devices now
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Google login error:", error);
       if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError("The sign-in window was closed before completion. Please try again.");
-      } else if (error.code === 'auth/popup-blocked') {
-        setAuthError("The browser blocked the sign-in popup. Please enable popups for this site.");
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // User triggered another request, ignore
+        setAuthError("The sign-in window was closed. If you are on mobile, please ensure popups are enabled and try again.");
       } else {
         setAuthError(error.message || "An error occurred during Google sign-in.");
       }
@@ -95,10 +79,13 @@ export default function LoginPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (user && !authError)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-medium text-muted-foreground">Redirecting to your dashboard...</p>
+        </div>
       </div>
     );
   }
