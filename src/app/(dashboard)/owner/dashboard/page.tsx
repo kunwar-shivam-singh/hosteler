@@ -7,7 +7,7 @@ import { useFirebase } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
 import { PropertyCard } from "@/components/property-card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Home, CheckCircle, Clock, XCircle, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { PlusCircle, Loader2, Home, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +29,6 @@ export default function OwnerDashboard() {
     if (!db || !user) return;
     setLoading(true);
     try {
-      // Removed orderBy to avoid requiring composite indexes
       const q = query(
         collection(db, "properties"),
         where("ownerId", "==", user.uid)
@@ -37,7 +36,6 @@ export default function OwnerDashboard() {
       const querySnapshot = await getDocs(q);
       const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Client-side sort
       results.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
@@ -97,72 +95,35 @@ export default function OwnerDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold font-headline">Manage Listings</h2>
-            <Link href="/owner/dashboard" className="text-xs font-bold text-primary hover:underline">View All</Link>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold font-headline">Manage Listings</h2>
+          <Link href="/owner/dashboard" className="text-xs font-bold text-primary hover:underline">View All</Link>
+        </div>
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground font-medium">Syncing data...</p>
           </div>
-          
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground font-medium">Syncing data...</p>
+        ) : properties.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard key={property.id} property={property} role="owner" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border border-dashed text-center px-10">
+            <div className="bg-muted p-8 rounded-full mb-6">
+              <PlusCircle className="h-12 w-12 text-muted-foreground opacity-20" />
             </div>
-          ) : properties.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {properties.map((property) => (
-                <PropertyCard key={property.id} property={property} role="owner" />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border border-dashed text-center px-10">
-              <div className="bg-muted p-8 rounded-full mb-6">
-                <PlusCircle className="h-12 w-12 text-muted-foreground opacity-20" />
-              </div>
-              <h3 className="text-2xl font-bold font-headline">No listings found</h3>
-              <p className="text-muted-foreground max-w-sm mt-2">Start earning by listing your first PG or Hostel today!</p>
-              <Button asChild className="mt-8 rounded-2xl h-12 px-10" size="lg">
-                <Link href="/owner/add">Add Listing Now</Link>
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold font-headline">Quick Insights</h2>
-          <Card className="dashboard-card overflow-hidden">
-            <CardContent className="p-0">
-              <div className="bg-primary p-6 text-white">
-                <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Estimated Reach</p>
-                <p className="text-4xl font-black font-headline">1,248</p>
-                <p className="text-[10px] mt-4 font-medium bg-white/20 inline-block px-2 py-1 rounded-lg">+12% from last month</p>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-muted p-2 rounded-xl"><Users className="h-4 w-4 text-muted-foreground" /></div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold">Inquiries</p>
-                    <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-primary w-[65%] rounded-full"></div>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black">42</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="bg-muted p-2 rounded-xl"><MessageSquare className="h-4 w-4 text-muted-foreground" /></div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold">Responses</p>
-                    <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-accent w-[40%] rounded-full"></div>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black">28</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <h3 className="text-2xl font-bold font-headline">No listings found</h3>
+            <p className="text-muted-foreground max-w-sm mt-2">Start earning by listing your first PG or Hostel today!</p>
+            <Button asChild className="mt-8 rounded-2xl h-12 px-10" size="lg">
+              <Link href="/owner/add">Add Listing Now</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
