@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/context/auth-context";
@@ -74,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground font-medium animate-pulse">Loading hosteler.in...</p>
+        <p className="text-muted-foreground font-medium animate-pulse">Loading HOSTELER...</p>
       </div>
     );
   }
@@ -118,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
               <Home className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-primary font-headline tracking-tight">hosteler.in</span>
+            <span className="text-2xl font-bold text-primary font-headline tracking-tight uppercase">HOSTELER</span>
           </Link>
         </div>
         
@@ -199,7 +198,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="bg-primary p-1.5 rounded-lg">
               <Home className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-primary">hosteler.in</span>
+            <span className="text-lg font-bold text-primary uppercase">HOSTELER</span>
           </Link>
           <Button variant="ghost" size="icon" className="rounded-xl">
             <Bell className="h-5 w-5 text-muted-foreground" />

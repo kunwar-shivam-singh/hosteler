@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -41,7 +40,6 @@ export default function LoginPage() {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
         setAuthError(`Unauthorized Domain: Please whitelist '${domain}' in Firebase.`);
       }
-      // Ignore "missing initial state" - it usually resolves on next check
     });
 
     // 2. Monitor for background session success
@@ -137,8 +135,8 @@ export default function LoginPage() {
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">Login</CardTitle>
-          <CardDescription className="text-center">Access your hosteler.in dashboard</CardDescription>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight uppercase">HOSTELER</CardTitle>
+          <CardDescription className="text-center">Access your dashboard</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MarketingNavbar } from "@/components/marketing-navbar";
@@ -30,10 +29,10 @@ export default function TermsOfServicePage() {
                 </h2>
                 <div className="text-muted-foreground font-medium leading-relaxed space-y-4">
                   <p>
-                    hosteler.in is a marketplace platform that connects tenants and property owners. We do not own, manage, or control any PG or hostel listed on the platform.
+                    HOSTELER is a marketplace platform that connects tenants and property owners. We do not own, manage, or control any PG or hostel listed on the platform.
                   </p>
                   <p>
-                    By using this platform, you agree that hosteler.in acts only as an intermediary service provider.
+                    By using this platform, you agree that HOSTELER acts only as an intermediary service provider.
                   </p>
                 </div>
               </div>
@@ -48,7 +47,7 @@ export default function TermsOfServicePage() {
                     Users are responsible for verifying property details, visiting locations, and making payments at their own discretion.
                   </p>
                   <p>
-                    hosteler.in does not guarantee the accuracy of listings and is not liable for fraud, disputes, damages, losses, or transactions between users.
+                    HOSTELER does not guarantee the accuracy of listings and is not liable for fraud, disputes, damages, losses, or transactions between users.
                   </p>
                   <p className="text-foreground font-bold">
                     We strongly advise users to visit properties personally before making any payments.
@@ -69,7 +68,7 @@ export default function TermsOfServicePage() {
               </div>
 
               <div className="pt-8 border-t text-sm text-muted-foreground italic">
-                By signing up or using hosteler.in, you acknowledge that you have read and agreed to these terms.
+                By signing up or using HOSTELER, you acknowledge that you have read and agreed to these terms.
               </div>
             </div>
           </div>

@@ -15,7 +15,7 @@ export function MarketingFooter() {
               <div className="bg-primary p-1.5 rounded-lg">
                 <Home className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold font-headline text-primary">hosteler.in</span>
+              <span className="text-xl font-bold font-headline text-primary uppercase">HOSTELER</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Making accommodation search simple, transparent, and affordable for students and young professionals across India.
@@ -62,7 +62,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="border-t pt-8 text-center text-xs text-muted-foreground font-medium">
-          <p>© {currentYear} hosteler.in. All rights reserved. Built with ❤️ in Mumbai.</p>
+          <p>© {currentYear} HOSTELER. All rights reserved. Built with ❤️ in India.</p>
         </div>
       </div>
     </footer>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -27,7 +26,7 @@ export function MarketingNavbar() {
               <div className="bg-primary p-1.5 rounded-lg">
                 <Home className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold font-headline text-primary tracking-tight">hosteler.in</span>
+              <span className="text-xl font-bold font-headline text-primary tracking-tight uppercase">HOSTELER</span>
             </Link>
           </div>
 

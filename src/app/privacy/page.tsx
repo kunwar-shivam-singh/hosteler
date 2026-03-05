@@ -55,7 +55,7 @@ export default function PrivacyPolicyPage() {
               <div className="pt-8 border-t space-y-4">
                 <h3 className="text-lg font-black">Data Removal</h3>
                 <p className="text-muted-foreground font-medium">
-                  You may request data removal anytime by contacting support at <strong>support@pglocator.com</strong>.
+                  You may request data removal anytime by contacting support at <strong>support@hosteler.in</strong>.
                 </p>
               </div>
             </div>

@@ -51,7 +51,7 @@ export default function TrustSafetyPage() {
               <AlertTriangle className="h-6 w-6 text-orange-600" />
               <AlertTitle className="text-xl font-black mb-2 ml-4">Warning Banner</AlertTitle>
               <AlertDescription className="text-lg font-medium ml-4">
-                PG Locator never asks for payments or deposits. Always visit and verify before paying any owner.
+                HOSTELER never asks for payments or deposits. Always visit and verify before paying any owner.
               </AlertDescription>
             </Alert>
 

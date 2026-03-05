@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MarketingNavbar } from "@/components/marketing-navbar";

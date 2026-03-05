@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MarketingNavbar } from "@/components/marketing-navbar";
@@ -33,7 +32,7 @@ export default function AboutPage() {
         <section className="py-20 md:py-32 bg-gradient-to-b from-primary/5 to-white overflow-hidden">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-7xl font-black font-headline mb-6 tracking-tight text-foreground leading-[1.1]">
-              About hosteler.in
+              About HOSTELER
             </h1>
             <p className="max-w-4xl mx-auto text-2xl md:text-3xl text-primary font-black mb-8">
               Making PG & Hostel Search Simple, Transparent, and Broker-Free
@@ -62,7 +61,7 @@ export default function AboutPage() {
                     Many PGs and hostels are not even listed online, making the process slow, confusing, and frustrating.
                   </p>
                   <p className="text-foreground font-bold">
-                    hosteler.in was built to change that.
+                    HOSTELER was built to change that.
                   </p>
                 </div>
                 <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
@@ -120,7 +119,7 @@ export default function AboutPage() {
                         Despite everything else going digital — taxis, food delivery, shopping — finding a simple place to stay was still stuck in the offline world.
                       </p>
                       <p className="text-primary font-black text-xl">
-                        That’s when the idea for hosteler.in was born. A platform that makes accommodation search as easy as booking a cab.
+                        That’s when the idea for HOSTELER was born. A platform that makes accommodation search as easy as booking a cab.
                       </p>
                    </div>
                 </div>
@@ -244,14 +243,14 @@ export default function AboutPage() {
                           <div>
                             <h3 className="text-3xl md:text-4xl font-black">Shivam Singh</h3>
                             <p className="text-primary font-bold flex items-center gap-2 mt-1">
-                               Founder, hosteler.in • Mumbai, Maharashtra
+                               Founder, HOSTELER • Mumbai, Maharashtra
                             </p>
                           </div>
                           
                           <div className="relative">
                             <Sparkles className="absolute -top-6 -left-6 h-12 w-12 text-muted-foreground/20" />
                             <p className="text-xl md:text-2xl font-medium italic leading-relaxed text-muted-foreground">
-                               "I started hosteler.in because I personally struggled to find good PGs during my college days in Pune and later while moving to Mumbai for work. I realized that thousands of people face the same frustration every day. My goal is simple — no one should depend on brokers or waste days searching for a room. We’re building a platform that makes finding a PG quick, transparent, and reliable for everyone."
+                               "I started HOSTELER because I personally struggled to find good PGs during my college days in Pune and later while moving to Mumbai for work. I realized that thousands of people face the same frustration every day. My goal is simple — no one should depend on brokers or waste days searching for a room. We’re building a platform that makes finding a PG quick, transparent, and reliable for everyone."
                             </p>
                           </div>
                        </div>
@@ -266,7 +265,7 @@ export default function AboutPage() {
           <div className="container mx-auto px-4 max-w-2xl space-y-8">
              <h2 className="text-3xl md:text-5xl font-black">Join Us</h2>
              <p className="text-lg text-muted-foreground font-medium">
-                Whether you’re looking for a room or listing your property, hosteler.in is here to make the process easier. Start exploring today and find your next home with confidence.
+                Whether you’re looking for a room or listing your property, HOSTELER is here to make the process easier. Start exploring today and find your next home with confidence.
              </p>
              <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Button asChild size="lg" className="h-16 px-10 rounded-2xl font-bold text-lg">

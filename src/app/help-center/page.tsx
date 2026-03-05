@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MarketingNavbar } from "@/components/marketing-navbar";
@@ -33,7 +32,7 @@ export default function HelpCenterPage() {
     },
     {
       question: "Is there any brokerage fee?",
-      answer: "No. hosteler.in is a zero-brokerage platform. You deal directly with the owners, and we do not charge any commission from tenants.",
+      answer: "No. HOSTELER is a zero-brokerage platform. You deal directly with the owners, and we do not charge any commission from tenants.",
       icon: Star
     },
     {
@@ -52,7 +51,7 @@ export default function HelpCenterPage() {
             <HelpCircle className="h-16 w-16 mx-auto mb-6 opacity-20" />
             <h1 className="text-4xl md:text-6xl font-black font-headline mb-4">Help Center</h1>
             <p className="max-w-2xl mx-auto text-xl opacity-90">
-              Everything you need to know about using hosteler.in.
+              Everything you need to know about using HOSTELER.
             </p>
           </div>
         </section>

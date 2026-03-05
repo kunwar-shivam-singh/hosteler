@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -114,7 +113,7 @@ export default function SignupPage() {
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">Create Account</CardTitle>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight uppercase">HOSTELER</CardTitle>
           <CardDescription className="text-center px-6">Join the best mobile-first PG marketplace</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">

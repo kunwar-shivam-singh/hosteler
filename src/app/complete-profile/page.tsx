@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -61,7 +60,7 @@ export default function CompleteProfilePage() {
         termsAcceptedAt: new Date().toISOString(),
       });
 
-      toast({ title: "Profile Completed!", description: "Welcome to hosteler.in." });
+      toast({ title: "Profile Completed!", description: "Welcome to HOSTELER." });
       
       // Use window.location.href for a hard redirect to ensure AuthContext 
       // fetches the updated user document immediately on reload.

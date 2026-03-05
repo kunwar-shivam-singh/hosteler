@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -54,7 +53,7 @@ export default function LandingPage() {
     heroTitle: cmsData?.heroTitle || "Your Perfect Stay is Just One Tap Away",
     heroSubtitle: cmsData?.heroSubtitle || "Find verified PGs and Hostels with zero brokerage. Simple, transparent, and built for modern living.",
     tagline: cmsData?.tagline || "Now AI-Powered Listing Enhancements",
-    aboutText: cmsData?.aboutText || "hosteler.in helps students and professionals find verified PGs and hostels without brokers. Owners can list properties for free and connect directly with tenants.",
+    aboutText: cmsData?.aboutText || "HOSTELER helps students and professionals find verified PGs and hostels without brokers. Owners can list properties for free and connect directly with tenants.",
     features: cmsData?.features || [
       { title: "Verified Stays", desc: "Every listing is manually approved by our team to ensure safety and quality standards." },
       { title: "Community Reviews", desc: "Read honest feedback from fellow residents before you make your decision." },
