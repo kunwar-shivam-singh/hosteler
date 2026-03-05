@@ -16,7 +16,7 @@ import { useAuth } from "@/context/auth-context";
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, isProfileComplete, loading: authLoading } = useAuth();
+  const { user, isProfileComplete, loading: authLoading, role: currentRole } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,12 +29,11 @@ export default function CompleteProfilePage() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
-    } else if (!authLoading && isProfileComplete) {
+    } else if (!authLoading && isProfileComplete && currentRole) {
       // Profile already done, go to dashboard
-      const role = (user as any)?.role || "tenant"; // Fallback to tenant if role not yet synced in context
-      router.push(`/${role}/dashboard`);
+      router.push(`/${currentRole}/dashboard`);
     }
-  }, [user, isProfileComplete, authLoading, router]);
+  }, [user, isProfileComplete, authLoading, router, currentRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +54,12 @@ export default function CompleteProfilePage() {
       });
 
       toast({ title: "Profile Completed!", description: "Welcome to the platform." });
-      router.push(`/${formData.role}/dashboard`);
+      
+      // Use window.location.href for a hard redirect to ensure AuthContext 
+      // fetches the updated user document immediately on reload.
+      window.location.href = `/${formData.role}/dashboard`;
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -122,6 +123,7 @@ export default function CompleteProfilePage() {
                   className="pl-10 h-12 rounded-xl"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  suppressHydrationWarning
                 />
               </div>
             </div>
@@ -137,6 +139,7 @@ export default function CompleteProfilePage() {
                   className="pl-10 h-12 rounded-xl"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  suppressHydrationWarning
                 />
               </div>
             </div>
