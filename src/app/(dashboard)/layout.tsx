@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/context/auth-context";
@@ -25,7 +26,7 @@ import { auth } from "@/lib/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, role, loading, userName } = useAuth();
+  const { user, role, loading, userName, isProfileComplete } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -33,6 +34,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading) {
       if (!user) {
         router.push("/login");
+      } else if (!isProfileComplete) {
+        router.push("/complete-profile");
       } else if (role) {
         // Enforce role-based routing to prevent cross-role access and permission errors
         const segments = pathname.split('/');
@@ -45,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       }
     }
-  }, [user, role, loading, router, pathname]);
+  }, [user, role, loading, isProfileComplete, router, pathname]);
 
   if (loading) {
     return (
@@ -56,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) return null;
+  if (!user || !isProfileComplete) return null;
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -84,7 +87,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const currentNav = role ? navItems[role as keyof typeof navItems] : [];
-  const dashboardHome = role ? `/${role}/dashboard` : "/";
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">

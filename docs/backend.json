@@ -24,6 +24,10 @@
           "type": "string",
           "description": "The phone number of the user."
         },
+        "city": {
+          "type": "string",
+          "description": "The city where the user is located."
+        },
         "role": {
           "type": "string",
           "description": "The role of the user within the application, determining access and permissions. (Enum: 'tenant', 'owner', 'admin')"
@@ -194,7 +198,8 @@
   },
   "auth": {
     "providers": [
-      "password"
+      "password",
+      "google.com"
     ]
   },
   "firestore": {

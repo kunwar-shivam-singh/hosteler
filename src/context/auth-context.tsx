@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
@@ -12,6 +13,7 @@ interface AuthContextType {
   role: UserRole;
   loading: boolean;
   userName: string | null;
+  isProfileComplete: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   loading: true,
   userName: null,
+  isProfileComplete: false,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -26,6 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,14 +42,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userData = userDoc.data();
             setRole(userData.role as UserRole);
             setUserName(userData.name || null);
+            setIsProfileComplete(true);
+          } else {
+            // Document doesn't exist - likely Google sign in for first time
+            setRole(null);
+            setUserName(firebaseUser.displayName || null);
+            setIsProfileComplete(false);
           }
         } catch (error) {
           console.error("AuthContext: Error fetching user role:", error);
+          setIsProfileComplete(false);
         }
       } else {
         setUser(null);
         setRole(null);
         setUserName(null);
+        setIsProfileComplete(false);
       }
       setLoading(false);
     });
@@ -54,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [auth, db]);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, userName }}>
+    <AuthContext.Provider value={{ user, role, loading, userName, isProfileComplete }}>
       {children}
     </AuthContext.Provider>
   );
