@@ -41,12 +41,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!auth || !db) return;
 
-    // 1. Force Local Persistence
+    // 1. Force Local Persistence for stability across redirects
     setPersistence(auth, browserLocalPersistence).catch(console.error);
 
     // 2. Silently handle redirect results for mobile stability
-    getRedirectResult(auth).catch(() => {
-      // Ignore "missing initial state" errors common in redirects
+    // We don't block the UI on this promise to avoid "missing initial state" hangs
+    getRedirectResult(auth).catch((err) => {
+      // Log for dev debugging but don't crash
+      if (err.code !== 'auth/missing-initial-state') {
+        console.warn("Auth redirect check:", err.message);
+      }
     });
 
     // 3. Monitor Authentication State

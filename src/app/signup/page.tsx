@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +7,8 @@ import Link from "next/link";
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -24,8 +27,15 @@ export default function SignupPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor user state globally
   useEffect(() => {
+    // Handle potential redirect result
+    getRedirectResult(auth).catch((error) => {
+      if (error.code === 'auth/unauthorized-domain') {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        setAuthError(`Unauthorized Domain: Please whitelist '${domain}' in Firebase Auth.`);
+      }
+    });
+
     if (!authLoading && user) {
       if (isProfileComplete && role) {
         router.replace(`/${role}/dashboard`);
@@ -33,7 +43,7 @@ export default function SignupPage() {
         router.replace("/complete-profile");
       }
     }
-  }, [user, role, isProfileComplete, authLoading, router]);
+  }, [user, role, isProfileComplete, authLoading, router, auth]);
 
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
@@ -42,26 +52,38 @@ export default function SignupPage() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (error: any) {
+        setAuthError(error.message);
+        setIsGoogleLoading(false);
+      }
+      return;
+    }
+
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google signup error:", error);
+      console.error("Auth error:", error);
       
       if (auth.currentUser) return;
 
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
-        setAuthError(`Unauthorized Domain: Please whitelist '${domain}' in your Firebase Console.`);
+        setAuthError(`Unauthorized Domain: Add '${domain}' to your Firebase project.`);
         setIsGoogleLoading(false);
       } else if (error.code === 'auth/popup-closed-by-user') {
         setTimeout(() => {
           if (!auth.currentUser) {
-            setAuthError("The signup window was closed. Please try again.");
+            setAuthError("Sign-up window was closed. Try again or ensure popups are enabled.");
             setIsGoogleLoading(false);
           }
         }, 2000);
       } else {
-        setAuthError(error.message || "An error occurred during Google sign-up.");
+        setAuthError(error.message || "An error occurred.");
         setIsGoogleLoading(false);
       }
     }
@@ -72,7 +94,7 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground font-headline">Starting session...</p>
+          <p className="text-sm font-medium text-muted-foreground font-headline">Checking session...</p>
         </div>
       </div>
     );
@@ -93,14 +115,14 @@ export default function SignupPage() {
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">Join PG Locator</CardTitle>
-          <CardDescription className="text-center px-6">The fastest way to find or list your perfect stay.</CardDescription>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight">Sign Up</CardTitle>
+          <CardDescription className="text-center px-6">Create your account to find or list your perfect stay.</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (
             <Alert variant="destructive" className="rounded-xl border-none bg-red-50 text-red-800">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertTitle className="font-bold">Signup Notice</AlertTitle>
+              <AlertTitle className="font-bold">Notice</AlertTitle>
               <AlertDescription className="text-xs">{authError}</AlertDescription>
             </Alert>
           )}
@@ -121,14 +143,14 @@ export default function SignupPage() {
                 <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
             )}
-            Continue with Google
+            Sign Up with Google
           </Button>
 
           <p className="text-center text-xs text-muted-foreground font-medium px-4">
-            By continuing, you agree to our terms and will be prompted to complete your profile in the next step.
+            By continuing, you agree to our Terms and Privacy Policy. You'll complete your profile in the next step.
           </p>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 pb-10">
+        <CardFooter className="flex flex-col pb-10">
           <div className="text-sm text-center text-muted-foreground font-medium">
             Already have an account?{" "}
             <Link href="/login" className="text-primary hover:underline font-black">

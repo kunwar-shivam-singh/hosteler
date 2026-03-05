@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +7,8 @@ import Link from "next/link";
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import { useFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -31,9 +34,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Monitor user state globally. If auth succeeds in background, 
-  // this will trigger and move the user to the next step instantly.
   useEffect(() => {
+    // 1. Handle redirect results (common on mobile)
+    getRedirectResult(auth).catch((error) => {
+      if (error.code === 'auth/unauthorized-domain') {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        setAuthError(`Unauthorized Domain: Please whitelist '${domain}' in Firebase.`);
+      }
+      // Ignore "missing initial state" - it usually resolves on next check
+    });
+
+    // 2. Monitor for background session success
     if (!authLoading && user) {
       if (isProfileComplete && role) {
         router.replace(`/${role}/dashboard`);
@@ -41,18 +52,16 @@ export default function LoginPage() {
         router.replace("/complete-profile");
       }
     }
-  }, [user, role, isProfileComplete, authLoading, router]);
+  }, [user, role, isProfileComplete, authLoading, router, auth]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setAuthError(null);
-
     try {
       initiateEmailSignIn(auth, email, password);
     } catch (error: any) {
       setAuthError(error.message);
-      toast({ variant: "destructive", title: "Login Failed", description: error.message });
       setIsLoading(false);
     }
   };
@@ -64,28 +73,39 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (error: any) {
+        setAuthError(error.message);
+        setIsGoogleLoading(false);
+      }
+      return;
+    }
+
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google login error:", error);
+      console.error("Auth error:", error);
       
-      // If user is actually signed in (detected via background SDK check), ignore the error
       if (auth.currentUser) return;
 
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
-        setAuthError(`Unauthorized Domain: Please add '${domain}' to Authorized Domains in your Firebase Auth settings.`);
+        setAuthError(`Domain Not Authorized: Add '${domain}' to Firebase Console > Auth > Settings.`);
         setIsGoogleLoading(false);
       } else if (error.code === 'auth/popup-closed-by-user') {
-        // Wait 2s to see if background sync caught it anyway
+        // Wait to see if background sync caught it anyway
         setTimeout(() => {
           if (!auth.currentUser) {
-            setAuthError("Sign-in window was closed. Try again or check if popups are blocked.");
+            setAuthError("Sign-in window was closed. If you are on mobile, please ensure popups are enabled and try again.");
             setIsGoogleLoading(false);
           }
-        }, 2000);
+        }, 2500);
       } else {
-        setAuthError(error.message || "An error occurred during Google sign-in.");
+        setAuthError(error.message || "An error occurred.");
         setIsGoogleLoading(false);
       }
     }
@@ -96,7 +116,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground font-headline">Checking session...</p>
+          <p className="text-sm font-medium text-muted-foreground font-headline">Syncing session...</p>
         </div>
       </div>
     );
@@ -117,8 +137,8 @@ export default function LoginPage() {
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">Welcome back</CardTitle>
-          <CardDescription className="text-center">Sign in to your PG Locator account</CardDescription>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight">Login</CardTitle>
+          <CardDescription className="text-center">Access your PG Locator dashboard</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (
@@ -152,55 +172,54 @@ export default function LoginPage() {
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-4 text-muted-foreground font-black tracking-widest">Or login with email</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-4 text-muted-foreground font-bold">OR EMAIL LOGIN</span>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-bold ml-1">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
                 required
-                className="h-12 rounded-xl bg-muted/30 border-none focus:bg-white transition-all"
+                className="rounded-xl h-12"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" title="password" className="font-bold ml-1">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  className="h-12 rounded-xl bg-muted/30 border-none focus:bg-white transition-all pr-10"
+                  className="rounded-xl h-12 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full h-14 rounded-2xl font-black text-lg" disabled={isLoading || isGoogleLoading}>
+            <Button type="submit" className="w-full h-14 rounded-2xl font-black" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
               Sign In
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 pb-10">
+        <CardFooter className="flex flex-col pb-10">
           <div className="text-sm text-center text-muted-foreground font-medium">
             Don't have an account?{" "}
             <Link href="/signup" className="text-primary hover:underline font-black">
-              Create account
+              Sign up with Google
             </Link>
           </div>
         </CardFooter>
