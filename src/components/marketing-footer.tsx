@@ -15,7 +15,7 @@ export function MarketingFooter() {
               <div className="bg-primary p-1.5 rounded-lg">
                 <Home className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold font-headline text-primary">PG Locator</span>
+              <span className="text-xl font-bold font-headline text-primary">hosteler.in</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Making accommodation search simple, transparent, and affordable for students and young professionals across India.
@@ -47,7 +47,7 @@ export function MarketingFooter() {
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-primary" />
-                support@pglocator.com
+                support@hosteler.in
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-primary" />
@@ -62,7 +62,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="border-t pt-8 text-center text-xs text-muted-foreground font-medium">
-          <p>© {currentYear} PG Locator. All rights reserved. Built with ❤️ in Mumbai.</p>
+          <p>© {currentYear} hosteler.in. All rights reserved. Built with ❤️ in Mumbai.</p>
         </div>
       </div>
     </footer>

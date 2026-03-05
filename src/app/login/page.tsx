@@ -138,7 +138,7 @@ export default function LoginPage() {
             <Home className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-3xl font-black font-headline tracking-tight">Login</CardTitle>
-          <CardDescription className="text-center">Access your PG Locator dashboard</CardDescription>
+          <CardDescription className="text-center">Access your hosteler.in dashboard</CardDescription>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (

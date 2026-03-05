@@ -35,8 +35,8 @@ export default function AdminSettingsPage() {
     heroSubtitle: "",
     tagline: "",
     aboutText: "",
-    contactEmail: "support@pglocator.com",
-    footerText: "© 2025 PG Locator. All rights reserved.",
+    contactEmail: "support@hosteler.in",
+    footerText: "© 2025 hosteler.in. All rights reserved.",
     popularAreas: [
       { name: "Mumbai", count: "120+ Listings", img: "https://picsum.photos/seed/mumbai/400/300" },
       { name: "Bangalore", count: "85+ Listings", img: "https://picsum.photos/seed/bangalore/400/300" },

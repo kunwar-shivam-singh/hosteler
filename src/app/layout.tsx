@@ -5,7 +5,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'PG Locator - Find Your Perfect Stay',
+  title: 'Hosteler.in - Find Your Perfect Stay',
   description: 'The best mobile-first PG and Hostel marketplace.',
 };
 

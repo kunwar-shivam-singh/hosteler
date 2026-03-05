@@ -61,7 +61,7 @@ export default function CompleteProfilePage() {
         termsAcceptedAt: new Date().toISOString(),
       });
 
-      toast({ title: "Profile Completed!", description: "Welcome to PG Locator." });
+      toast({ title: "Profile Completed!", description: "Welcome to hosteler.in." });
       
       // Use window.location.href for a hard redirect to ensure AuthContext 
       // fetches the updated user document immediately on reload.
