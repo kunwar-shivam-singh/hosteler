@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   GoogleAuthProvider, 
-  signInWithPopup
+  signInWithPopup,
+  signInWithRedirect
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export default function SignupPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Monitor user state globally. If auth succeeds in background, 
-  // this will trigger and move the user to the next step.
+  // this will trigger and move the user to the next step instantly.
   useEffect(() => {
     if (!authLoading && user) {
       if (isProfileComplete && role) {
@@ -39,26 +40,33 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     setAuthError(null);
+    
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
+      // First attempt: Popup (Standard Desktop)
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google signup error:", error);
+      console.error("Google signup attempt error:", error);
       
-      // If user is actually signed in (detected via SDK), ignore the "closed" error
+      // If user is actually signed in (detected via background SDK check), ignore the error
       if (auth.currentUser) return;
 
       if (error.code === 'auth/popup-closed-by-user') {
-        // Mobile browsers often close popups aggressively. 
-        // We wait a moment to see if the session was caught anyway.
+        // Mobile browsers quirk: Wait to see if background session succeeded anyway
         setTimeout(() => {
           if (!auth.currentUser) {
-            setAuthError("The sign-up window was closed. Please try again and ensure popups are allowed in your browser.");
-            setIsGoogleLoading(false);
+            setAuthError("The signup window was closed. Attempting redirect method...");
+            // Fallback: Redirect (Stable for Mobile Safari/Chrome)
+            signInWithRedirect(auth, provider).catch(err => {
+               setAuthError("Signup failed: " + err.message);
+               setIsGoogleLoading(false);
+            });
           }
-        }, 2500);
+        }, 2000);
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Do nothing
       } else {
         setAuthError(error.message || "An error occurred during Google sign-up.");
         setIsGoogleLoading(false);
@@ -71,14 +79,14 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Setting up your session...</p>
+          <p className="text-sm font-medium text-muted-foreground font-headline">Initializing session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 gap-6">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8F9FA] p-4 gap-6">
       <div className="w-full max-w-md flex justify-start">
         <Button variant="ghost" asChild className="rounded-xl">
           <Link href="/">
@@ -87,7 +95,7 @@ export default function SignupPage() {
         </Button>
       </div>
 
-      <Card className="w-full max-w-md shadow-xl rounded-[2.5rem] border-none overflow-hidden">
+      <Card className="w-full max-w-md shadow-2xl rounded-[2.5rem] border-none overflow-hidden bg-white">
         <CardHeader className="space-y-1 flex flex-col items-center pt-10 pb-6 bg-primary/5">
           <div className="bg-primary p-3 rounded-2xl mb-4 shadow-lg shadow-primary/20">
             <Home className="h-8 w-8 text-white" />
@@ -97,9 +105,9 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {authError && (
-            <Alert variant="destructive" className="rounded-xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Sign-up Issue</AlertTitle>
+            <Alert variant="destructive" className="rounded-xl border-none bg-red-50 text-red-800">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="font-bold">Signup Notice</AlertTitle>
               <AlertDescription className="text-xs">{authError}</AlertDescription>
             </Alert>
           )}

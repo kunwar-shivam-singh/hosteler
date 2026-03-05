@@ -39,13 +39,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ensure persistence is set to local for mobile stability
+    // 1. Force Local Persistence for maximum mobile stability
     setPersistence(auth, browserLocalPersistence).catch((err) => {
       console.warn("AuthContext: Persistence setup failed", err);
     });
 
-    // Handle redirect results globally. 
-    // This is critical for mobile browsers that might reload the app after auth.
+    // 2. Handle Redirect Results (Critical for mobile Safari/Chrome)
+    // We wrap this in a silent catch because "missing initial state" 
+    // is common in storage-partitioned environments and can be ignored 
+    // as onAuthStateChanged will pick up the user anyway.
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
@@ -53,13 +55,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       })
       .catch((error) => {
-        // Silence "missing initial state" errors as they are often false positives 
-        // in storage-partitioned environments (Safari)
-        if (error.code !== 'auth/no-auth-event' && error.code !== 'auth/argument-error') {
-          console.warn("AuthContext: Redirect result issue handled:", error.message);
+        const ignoredErrors = ['auth/no-auth-event', 'auth/argument-error', 'auth/internal-error'];
+        if (!ignoredErrors.some(code => error.code?.includes(code))) {
+          console.log("AuthContext: Redirect result handled (silent):", error.message);
         }
       });
 
+    // 3. Monitor Authentication State
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
