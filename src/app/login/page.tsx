@@ -1,10 +1,16 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult 
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -13,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Home, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +28,35 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Handle redirect result for mobile users
+  useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          setIsGoogleLoading(true);
+          const user = result.user;
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            router.push(`/${userData.role}/dashboard`);
+            toast({ title: "Logged in successfully", description: `Welcome back, ${userData.name}` });
+          } else {
+            router.push("/complete-profile");
+          }
+        }
+      } catch (error: any) {
+        console.error("Auth redirect error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+          toast({ variant: "destructive", title: "Login Failed", description: error.message });
+        }
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    };
+    handleRedirect();
+  }, [router, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +72,6 @@ export default function LoginPage() {
         router.push(`/${userData.role}/dashboard`);
         toast({ title: "Logged in successfully", description: `Welcome back, ${userData.name}` });
       } else {
-        // This shouldn't happen with email/pass normally, but for safety:
         router.push("/complete-profile");
       }
     } catch (error: any) {
@@ -51,23 +84,41 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+    
+    // Check if device is mobile to decide between Popup and Redirect
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        router.push(`/${userData.role}/dashboard`);
-        toast({ title: "Logged in with Google", description: `Welcome back, ${userData.name}` });
+    try {
+      if (isMobile) {
+        await signInWithRedirect(auth, provider);
+        // Page will redirect, no further code execution in this turn
       } else {
-        // First time Google login
-        router.push("/complete-profile");
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          router.push(`/${userData.role}/dashboard`);
+          toast({ title: "Logged in with Google", description: `Welcome back, ${userData.name}` });
+        } else {
+          router.push("/complete-profile");
+        }
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Google Login Failed", description: error.message });
-    } finally {
-      setIsGoogleLoading(false);
+      console.error("Google login error:", error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        // Fallback to redirect if popup is closed or blocked
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirectError: any) {
+          toast({ variant: "destructive", title: "Google Login Failed", description: redirectError.message });
+          setIsGoogleLoading(false);
+        }
+      } else {
+        toast({ variant: "destructive", title: "Google Login Failed", description: error.message });
+        setIsGoogleLoading(false);
+      }
     }
   };
 
