@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,7 +49,6 @@ export default function LandingPage() {
     fetchCms();
   }, [db]);
 
-  // Default Fallbacks
   const content = {
     heroTitle: cmsData?.heroTitle || "Your Perfect Stay is Just One Tap Away",
     heroSubtitle: cmsData?.heroSubtitle || "Find verified PGs and Hostels with zero brokerage. Simple, transparent, and built for modern living.",
@@ -80,7 +80,6 @@ export default function LandingPage() {
       <MarketingNavbar />
 
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="relative w-full py-20 lg:py-32 overflow-hidden bg-gradient-to-b from-primary/5 to-white">
           <div className="container mx-auto px-4 relative z-10">
             <div className="flex flex-col items-center text-center space-y-8">
@@ -127,7 +126,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* How It Works */}
         <section className="w-full py-24 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
@@ -183,7 +181,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Popular Areas */}
         <section className="w-full py-24 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="flex justify-between items-end mb-12">
@@ -217,7 +214,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features Grid */}
         <section className="w-full py-24 bg-white">
           <div className="container mx-auto px-4">
              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -240,7 +236,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* About Preview */}
         <section className="w-full py-24 bg-primary text-white overflow-hidden relative">
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl">
