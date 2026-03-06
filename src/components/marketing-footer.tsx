@@ -39,7 +39,7 @@ export function MarketingFooter() {
               <li><Link href="/help-center" className="hover:text-primary transition-colors">Help Center</Link></li>
               <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/trust-safety" className="hover:text-primary transition-colors">Trust &amp; Safety</Link></li>
+              <li><Link href="/trust-safety" className="hover:text-primary transition-colors">Trust & Safety</Link></li>
             </ul>
           </div>
 

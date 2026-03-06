@@ -6,7 +6,6 @@ import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { useAuth } from "@/context/auth-context";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, 
@@ -15,7 +14,6 @@ import {
   Sparkles, 
   CheckCircle2, 
   Users, 
-  MapPin, 
   Heart,
   Star,
   Loader2
@@ -27,7 +25,6 @@ import { MarketingFooter } from "@/components/marketing-footer";
 export default function LandingPage() {
   const db = useFirestore();
   const { user, role, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [cmsData, setCmsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

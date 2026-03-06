@@ -1,9 +1,10 @@
+
 "use client";
 
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { Home, Menu, X, LayoutDashboard, User } from "lucide-react";
+import { Home, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 
 export function MarketingNavbar() {
@@ -30,7 +31,6 @@ export function MarketingNavbar() {
             </Link>
           </div>
 
-          {/* Desktop Nav */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               {navLinks.map((link) => (
@@ -65,7 +65,6 @@ export function MarketingNavbar() {
             )}
           </div>
 
-          {/* Mobile menu button */}
           <div className="flex md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -77,7 +76,6 @@ export function MarketingNavbar() {
         </div>
       </div>
 
-      {/* Mobile Nav */}
       {isOpen && (
         <div className="md:hidden border-t bg-white px-2 pb-3 pt-2 space-y-1">
           {navLinks.map((link) => (
@@ -94,7 +92,7 @@ export function MarketingNavbar() {
              {!loading && user && role ? (
                 <Button asChild className="w-full">
                   <Link href={`/${role}/dashboard`}>
-                    Go to Dashboard ({userName?.split(' ')[0]})
+                    Go to Dashboard
                   </Link>
                 </Button>
              ) : (
